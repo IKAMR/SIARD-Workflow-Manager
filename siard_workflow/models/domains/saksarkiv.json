@@ -1,0 +1,18 @@
+{
+  "format_version": 1,
+  "id": "saksarkiv",
+  "label": "Saksarkiv",
+  "category_code": "1-01",
+  "status": "draft",
+  "modules": [
+    "case",
+    "registration",
+    "document",
+    "file_reference",
+    "person",
+    "contact_info",
+    "access_control",
+    "event_log"
+  ],
+  "description": "Konseptuell fagmodell under utvikling. Fysisk systemkartlegging krever ekstern, godkjent adapter."
+}

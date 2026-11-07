@@ -1,0 +1,41 @@
+{
+  "format_version": 1,
+  "id": "synthetic_case_demo",
+  "label": "SYNTHETISK TEST - aldri bruk mot ekte uttrekk",
+  "domain_id": "saksarkiv",
+  "visibility": "public",
+  "system_hint": "Synthetic SIARD fixture used only by unit tests",
+  "description": "Demonstrerer grensesnittet. Tabellen SAK og JOURNALPOST er ikke verifiserte ePhorte-mappinger.",
+  "bindings": [
+    {
+      "entity_id": "case_file",
+      "review_status": "approved",
+      "source": {"schema": "schema0", "table": "SAK"},
+      "key": ["SAK_ID"],
+      "status_column": "STATUS"
+    },
+    {
+      "entity_id": "journal_post",
+      "review_status": "approved",
+      "source": {"schema": "schema0", "table": "JOURNALPOST"},
+      "key": ["JP_ID"],
+      "date_column": "JOURNAL_DATO"
+    },
+    {
+      "entity_id": "document_description",
+      "review_status": "proposed",
+      "source": {"schema": "schema0", "table": "DOCUMENT"},
+      "key": ["DOC_ID"]
+    }
+  ],
+  "relations": [
+    {
+      "id": "journalpost_case",
+      "review_status": "approved",
+      "child": "journal_post",
+      "parent": "case_file",
+      "child_columns": ["SAK_ID"],
+      "required": true
+    }
+  ]
+}

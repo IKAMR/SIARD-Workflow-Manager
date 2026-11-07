@@ -1,0 +1,78 @@
+{
+  "format_version": 1,
+  "id": "ikamr_system_models",
+  "label": "IKAMR generiske fag- og modulmodeller (pilot)",
+  "taxonomies": "taxonomies/kommunale_systemkategorier.json",
+  "modules": [
+    {
+      "id": "access_control",
+      "path": "common/access_control.json"
+    },
+    {
+      "id": "case",
+      "path": "common/case.json"
+    },
+    {
+      "id": "client_registry",
+      "path": "common/client_registry.json"
+    },
+    {
+      "id": "contact_info",
+      "path": "common/contact_info.json"
+    },
+    {
+      "id": "document",
+      "path": "common/document.json"
+    },
+    {
+      "id": "event_log",
+      "path": "common/event_log.json"
+    },
+    {
+      "id": "file_reference",
+      "path": "common/file_reference.json"
+    },
+    {
+      "id": "person",
+      "path": "common/person.json"
+    },
+    {
+      "id": "registration",
+      "path": "common/registration.json"
+    },
+    {
+      "id": "service",
+      "path": "common/service.json"
+    }
+  ],
+  "domains": [
+    {
+      "id": "barnevern",
+      "path": "domains/barnevern.json"
+    },
+    {
+      "id": "helsetjeneste",
+      "path": "domains/helsetjeneste.json"
+    },
+    {
+      "id": "pleie_omsorg",
+      "path": "domains/pleie_omsorg.json"
+    },
+    {
+      "id": "ppt",
+      "path": "domains/ppt.json"
+    },
+    {
+      "id": "saksarkiv",
+      "path": "domains/saksarkiv.json"
+    },
+    {
+      "id": "skole",
+      "path": "domains/skole.json"
+    },
+    {
+      "id": "sosialtjeneste",
+      "path": "domains/sosialtjeneste.json"
+    }
+  ]
+}

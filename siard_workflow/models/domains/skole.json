@@ -1,0 +1,18 @@
+{
+  "format_version": 1,
+  "id": "skole",
+  "label": "Skole",
+  "category_code": "4-09",
+  "status": "draft",
+  "modules": [
+    "person",
+    "contact_info",
+    "client_registry",
+    "case",
+    "event_log",
+    "document",
+    "file_reference",
+    "access_control"
+  ],
+  "description": "Konseptuell fagmodell under utvikling. Fysisk systemkartlegging krever ekstern, godkjent adapter."
+}

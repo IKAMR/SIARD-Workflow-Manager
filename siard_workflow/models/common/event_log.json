@@ -1,0 +1,33 @@
+{
+  "format_version": 1,
+  "id": "event_log",
+  "label": "Hendelser og journal/logg",
+  "description": "Generisk arbeidsmodell. Ikke en normativ kravliste eller fysisk databaseskjema.",
+  "entities": [
+    {
+      "id": "event_record",
+      "label": "Hendelse",
+      "aliases": [
+        "hendelse",
+        "klientlogg",
+        "journalnotat"
+      ]
+    },
+    {
+      "id": "audit_event",
+      "label": "Endringslogg",
+      "aliases": [
+        "auditlog",
+        "endringslogg"
+      ]
+    },
+    {
+      "id": "case_note",
+      "label": "Merknad",
+      "aliases": [
+        "merknad",
+        "notat"
+      ]
+    }
+  ]
+}

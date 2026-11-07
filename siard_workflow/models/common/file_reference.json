@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "id": "file_reference",
+  "label": "Filer og binart innhold",
+  "description": "Generisk arbeidsmodell. Ikke en normativ kravliste eller fysisk databaseskjema.",
+  "entities": [
+    {
+      "id": "file_reference",
+      "label": "Filreferanse",
+      "aliases": [
+        "filreferanse",
+        "filsti"
+      ]
+    },
+    {
+      "id": "digital_file",
+      "label": "Digital fil/LOB",
+      "aliases": [
+        "lob",
+        "fil",
+        "binaer"
+      ]
+    }
+  ]
+}

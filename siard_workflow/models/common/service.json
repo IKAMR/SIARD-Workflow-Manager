@@ -1,0 +1,31 @@
+{
+  "format_version": 1,
+  "id": "service",
+  "label": "Tjenester, tiltak og forlop",
+  "description": "Generisk arbeidsmodell. Ikke en normativ kravliste eller fysisk databaseskjema.",
+  "entities": [
+    {
+      "id": "service_episode",
+      "label": "Tjenesteforlop",
+      "aliases": [
+        "forlop",
+        "tjeneste"
+      ]
+    },
+    {
+      "id": "intervention",
+      "label": "Tiltak",
+      "aliases": [
+        "tiltak",
+        "vedtak"
+      ]
+    },
+    {
+      "id": "service_recipient",
+      "label": "Tjenestemottaker",
+      "aliases": [
+        "tjenestemottaker"
+      ]
+    }
+  ]
+}

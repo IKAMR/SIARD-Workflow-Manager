@@ -1,0 +1,26 @@
+{
+  "format_version": 1,
+  "id": "client_registry",
+  "label": "Klient-/personliste",
+  "description": "Generisk arbeidsmodell. Ikke en normativ kravliste eller fysisk databaseskjema.",
+  "entities": [
+    {
+      "id": "client_record",
+      "label": "Klient-/personoppforing",
+      "aliases": [
+        "klient",
+        "elev",
+        "bruker",
+        "pasient"
+      ]
+    },
+    {
+      "id": "client_relationship",
+      "label": "Klientrelasjon",
+      "aliases": [
+        "klientrelasjon",
+        "foresatt"
+      ]
+    }
+  ]
+}

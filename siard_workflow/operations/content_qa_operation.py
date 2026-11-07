@@ -5,8 +5,11 @@ from pathlib import Path
 
 from siard_workflow.core.base_operation import BaseOperation, OperationResult
 from siard_workflow.core.context import WorkflowContext
-from siard_workflow.core.content_qa import load_profile, run_content_qa
+from siard_workflow.core.content_qa import run_content_qa
 from siard_workflow.core.content_qa.reporting import write_qa_reports
+from siard_workflow.core.content_qa.model_catalog import (
+    resolve_qa_model, inspect_resource_library, LEGACY,
+)
 
 
 class ContentQAOperation(BaseOperation):
@@ -19,7 +22,8 @@ class ContentQAOperation(BaseOperation):
         'Foreslår tabell-/nøkkelkoblinger og leser deklarerte fremmednøkler '
         'fra SIARD-metadata uten å godkjenne forslagene automatisk. '
         'Kildevalg: automatisk, utpakket SIARD eller SIARD-fil. '
-        'Kan kjøres før eller etter Pakk sammen SIARD.'
+        'Kan kjøres før eller etter Pakk sammen SIARD. '
+        'A4 har generiske fagmodeller, delte moduler og eksterne JSON-adaptere.'
     )
     category = 'Innhold'
     status = 1  # Pilot/beta, not a complete validated QA product.
@@ -32,6 +36,9 @@ class ContentQAOperation(BaseOperation):
         'source_mode': 'Automatisk',
         'unpacked_dir': '',
         'profile_file': '',
+        'domain_profile': LEGACY,
+        'adapter_file': '',
+        'resources_root': '',
         'scan_rows': True,
         'check_metadata_pk': True,
     }
@@ -99,7 +106,22 @@ class ContentQAOperation(BaseOperation):
         try:
             source, source_type, source_mode, source_origin = self._select_source(ctx)
             profile_path = str(self.params.get('profile_file') or '').strip()
-            profile = load_profile(profile_path)
+            resources_root = str(self.params.get('resources_root') or '').strip()
+            library = inspect_resource_library(resources_root)
+            profile, model_context = resolve_qa_model(
+                domain=str(self.params.get('domain_profile') or LEGACY),
+                adapter_file=str(self.params.get('adapter_file') or ''),
+                resource_root=resources_root,
+                profile_file=profile_path,
+            )
+            if library['configured']:
+                message('  Fagressursbibliotek: ekstern mappe er tilgjengelig '
+                        '(Decom/KDRS-maler blir ikke lastet automatisk)')
+            if model_context['mode'] == 'domain':
+                message('  Fagmodell: ' + model_context['domain_id'] +
+                        f'; moduler: {len(model_context["module_ids"])}; '
+                        f'godkjente kartlegginger: {model_context["bindings_applied"]}; '
+                        f'forslag som ikke aktiveres: {model_context["bindings_pending"]}')
             scan = bool(self.params.get('scan_rows', True))
             stop_event = ctx.metadata.get('stop_event')
             source_label = ('Utpakket SIARD' if source_type == 'utpakket_siard'
@@ -120,6 +142,8 @@ class ContentQAOperation(BaseOperation):
             result['source_selection'] = source_mode
             result['source_origin'] = source_origin
             result['input_siard_name'] = Path(ctx.siard_path).name
+            result['model_context'] = model_context
+            result['resource_library'] = library
             output_dir = Path(ctx.metadata.get('log_dir') or Path(ctx.siard_path).parent)
             paths = write_qa_reports(result, output_dir, Path(ctx.siard_path).stem)
             summary = result['summary']
@@ -140,6 +164,12 @@ class ContentQAOperation(BaseOperation):
                 'qa_carriers_with_errors': summary['carriers_with_errors'],
                 'qa_relations_verified': summary['relations_verified'],
                 'qa_profile_id': result['profile_id'],
+                'qa_domain_id': model_context['domain_id'],
+                'qa_model_sha256': model_context['model_sha256'],
+                'qa_adapter_id': model_context['adapter_id'],
+                'qa_adapter_sha256': model_context['adapter_sha256'],
+                'qa_bindings_approved': model_context['bindings_applied'],
+                'qa_bindings_pending': model_context['bindings_pending'],
                 'qa_report_pdf': paths['pdf'],
                 'qa_report_json': paths['json'],
                 'qa_tables_csv': paths['tables_csv'],

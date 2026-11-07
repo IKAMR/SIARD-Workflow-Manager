@@ -1,8 +1,22 @@
 # Innholdskontroll (QA) - rammeverk og ePhorte-pilot
 
-**Utviklingssprint:** `v1.4.23-ikamr-04-a3` (bygger videre på a1/a2)  
+**Utviklingssprint:** `v1.4.23-ikamr-04-a4` (bygger videre paa a1-a3)  
 **Gren:** `feature/innholdskontroll`  
 **Status:** Rammeverk/pilot - ikke arkivfaglig ferdigkontrollert.
+
+## Nytt i a4: generiske fagmodeller og privat adapterbibliotek
+
+A4 introduserer 10 felles moduler, 7 forelopige fagmodeller og de historiske
+9+20 ASTA/KAISA-/kommunale systemkategoriene som versjonerte, data-only JSON.
+Under **Innholdskontroll** kan operatøren velge fagmodell, eksisterende
+fagressursmappe (Decom/KDRS/adaptere) og en ekstern systemadapter i JSON.
+Kun bindinger merket `approved` brukes til radkontroll; `proposed` er fortsatt
+ukontrollerte forslag. Samme QA-rapportstruktur gjelder. Gammel QA-mal og
+standard ePhorte-kartlegging fungerer uendret uten nye innstillinger.
+
+Se `docs/INNHOLDSKONTROLL-A4-MODELLER-OG-ADAPTERE.md` for nøyaktig filstruktur,
+API, valg i GUI og avgrensninger. Ingen proprietære leverandørmappinger eller
+KDRS-/Decom-maler er inkludert i GitHub-deltaen.
 
 ## Formål og avgrensning
 

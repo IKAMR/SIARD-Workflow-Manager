@@ -1,0 +1,40 @@
+{
+  "format_version": 1,
+  "id": "document",
+  "label": "Dokument og dokumentkjede",
+  "description": "Generisk arbeidsmodell. Ikke en normativ kravliste eller fysisk databaseskjema.",
+  "entities": [
+    {
+      "id": "document_description",
+      "label": "Dokumentbeskrivelse",
+      "aliases": [
+        "dokbeskriv",
+        "dokumentbeskrivelse"
+      ]
+    },
+    {
+      "id": "document_link",
+      "label": "Dokumenttilknytning",
+      "aliases": [
+        "doklink",
+        "dokumentlink"
+      ]
+    },
+    {
+      "id": "document_version",
+      "label": "Dokumentversjon",
+      "aliases": [
+        "dokversjon",
+        "versjon"
+      ]
+    },
+    {
+      "id": "document_representation",
+      "label": "Dokumentrepresentasjon",
+      "aliases": [
+        "variantformat",
+        "dokumentvariant"
+      ]
+    }
+  ]
+}

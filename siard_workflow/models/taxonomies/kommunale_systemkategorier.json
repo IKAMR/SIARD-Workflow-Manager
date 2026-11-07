@@ -1,0 +1,169 @@
+{
+  "format_version": 1,
+  "source": {
+    "filename": "0000-kommune-elarkiv.xlsx",
+    "worksheet": "Kategorier",
+    "dated": "2020-05-15",
+    "status": "historic_working_reference_not_normative"
+  },
+  "primary_categories": [
+    {
+      "code": "1",
+      "label": "Sentral myndighet"
+    },
+    {
+      "code": "2",
+      "label": "Finanser, økonomi, statistikk, folkeregister"
+    },
+    {
+      "code": "3",
+      "label": "Justis- og politisaker, rettspleie, forhold til andre forvaltningsnivå"
+    },
+    {
+      "code": "4",
+      "label": "Kirke, kultur, utdanning og forskning"
+    },
+    {
+      "code": "5",
+      "label": "Næringsliv, kommunikasjon, ressurs og miljøforvaltning, tekniske oppgaver"
+    },
+    {
+      "code": "6",
+      "label": "Helse og sosialsaker"
+    },
+    {
+      "code": "7",
+      "label": "Utenrikssaker og utviklingssamarbeid"
+    },
+    {
+      "code": "8",
+      "label": "Forsvars- og beredskapssaker"
+    },
+    {
+      "code": "9",
+      "label": "Annet"
+    }
+  ],
+  "municipal_categories": [
+    {
+      "code": "1-01",
+      "primary_code": "1",
+      "subcode": "01",
+      "label": "Arkivtjeneste-saksarkiv"
+    },
+    {
+      "code": "1-02",
+      "primary_code": "1",
+      "subcode": "02",
+      "label": "Intern-admin-herunder-personal"
+    },
+    {
+      "code": "1-03",
+      "primary_code": "1",
+      "subcode": "03",
+      "label": "Sentrale-systemer"
+    },
+    {
+      "code": "1-04",
+      "primary_code": "1",
+      "subcode": "04",
+      "label": "Valg og valgadministrasjon"
+    },
+    {
+      "code": "2-05",
+      "primary_code": "2",
+      "subcode": "05",
+      "label": "Økonomi"
+    },
+    {
+      "code": "3-19",
+      "primary_code": "3",
+      "subcode": "19",
+      "label": "Forliksrådet"
+    },
+    {
+      "code": "3-20",
+      "primary_code": "3",
+      "subcode": "20",
+      "label": "Overformynderiet"
+    },
+    {
+      "code": "4-06",
+      "primary_code": "4",
+      "subcode": "06",
+      "label": "Barnehage"
+    },
+    {
+      "code": "4-07",
+      "primary_code": "4",
+      "subcode": "07",
+      "label": "Kirke"
+    },
+    {
+      "code": "4-08",
+      "primary_code": "4",
+      "subcode": "08",
+      "label": "Kultur og idrett"
+    },
+    {
+      "code": "4-09",
+      "primary_code": "4",
+      "subcode": "09",
+      "label": "Skole"
+    },
+    {
+      "code": "4-10",
+      "primary_code": "4",
+      "subcode": "10",
+      "label": "PPT"
+    },
+    {
+      "code": "5-11",
+      "primary_code": "5",
+      "subcode": "11",
+      "label": "Bygg-oppmåling-eiendom"
+    },
+    {
+      "code": "5-12",
+      "primary_code": "5",
+      "subcode": "12",
+      "label": "Naturforvaltning"
+    },
+    {
+      "code": "5-13",
+      "primary_code": "5",
+      "subcode": "13",
+      "label": "Teknisk-drift-og-anlegg"
+    },
+    {
+      "code": "6-14",
+      "primary_code": "6",
+      "subcode": "14",
+      "label": "Barnevern"
+    },
+    {
+      "code": "6-15",
+      "primary_code": "6",
+      "subcode": "15",
+      "label": "Flyktningetjeneste"
+    },
+    {
+      "code": "6-16",
+      "primary_code": "6",
+      "subcode": "16",
+      "label": "Helsetjeneste"
+    },
+    {
+      "code": "6-17",
+      "primary_code": "6",
+      "subcode": "17",
+      "label": "Pleie-og-omsorg"
+    },
+    {
+      "code": "6-18",
+      "primary_code": "6",
+      "subcode": "18",
+      "label": "Sosialtjeneste"
+    }
+  ]
+}

@@ -684,7 +684,9 @@ OP_DEFS = [
             "Skrivebeskyttet: endrer aldri SIARD. Lager PDF, CSV og JSON. "
             "Tom malfil bruker ePhorte-kartleggingsmalen (ikke automatisk godkjent). "
             "Kan kontrollere utpakket SIARD før sammenpakking eller SIARD-fil "
-            "etter sammenpakking. Kilden velges i innstillingene."
+            "etter sammenpakking. Kilden velges i innstillingene. "
+            "A4: velg generisk fagmodell og eventuell privat JSON-adapter; "
+            "ubekreftede forslag brukes ikke i kontrollen."
         ),
         "status": ContentQAOperation.status,
         "params": [
@@ -693,7 +695,16 @@ OP_DEFS = [
              "default": "Automatisk"},
             {"key": "unpacked_dir", "label": "Utpakket SIARD-mappe (valgfri)",
              "type": "folder", "default": ""},
-            {"key": "profile_file", "label": "QA-mal (JSON, tom = ePhorte-kartlegging)",
+            {"key": "domain_profile", "label": "Fagmodell (tomt valg = gammel QA-mal)",
+             "type": "choice",
+             "choices": ["Eksisterende QA-mal", "saksarkiv", "barnevern", "skole",
+                         "ppt", "helsetjeneste", "pleie_omsorg", "sosialtjeneste"],
+             "default": "Eksisterende QA-mal"},
+            {"key": "resources_root", "label": "Fagressursbibliotek (valgfri mappe)",
+             "type": "folder", "default": ""},
+            {"key": "adapter_file", "label": "Ekstern systemadapter (JSON, valgfri)",
+             "type": "file", "default": ""},
+            {"key": "profile_file", "label": "Gammel QA-mal (JSON, kun legacy)",
              "type": "file", "default": ""},
             {"key": "scan_rows", "label": "Tell og kontroller alle tabellrader",
              "type": "bool", "default": True},

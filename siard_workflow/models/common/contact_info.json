@@ -1,0 +1,33 @@
+{
+  "format_version": 1,
+  "id": "contact_info",
+  "label": "Kontaktinformasjon",
+  "description": "Generisk arbeidsmodell. Ikke en normativ kravliste eller fysisk databaseskjema.",
+  "entities": [
+    {
+      "id": "contact_detail",
+      "label": "Kontaktopplysning",
+      "aliases": [
+        "kontakt",
+        "telefon",
+        "epost"
+      ]
+    },
+    {
+      "id": "address",
+      "label": "Adresse",
+      "aliases": [
+        "adresse",
+        "postadresse"
+      ]
+    },
+    {
+      "id": "contact_relation",
+      "label": "Kontaktrelasjon",
+      "aliases": [
+        "kontaktperson",
+        "foresatt"
+      ]
+    }
+  ]
+}

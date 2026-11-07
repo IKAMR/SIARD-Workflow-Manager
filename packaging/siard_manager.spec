@@ -1,12 +1,8 @@
 # -*- mode: python ; coding: utf-8 -*-
 """
-PyInstaller-oppskrift for SIARD Workflow Manager (Windows, mappe-pakke).
+PyInstaller recipe for SIARD Workflow Manager (Windows one-folder bundle).
 
-Bygges via packaging/build_release.py (anbefalt), eller direkte:
-    python -m PyInstaller --noconfirm packaging/siard_manager.spec
-
-Resultat: dist/SIARDManager/SIARDManager.exe + _internal/ med Python og alle
-pakker. Kjører uten Python-installasjon og uten nett.
+python -m PyInstaller --noconfirm packaging/siard_manager.spec
 """
 import sys
 from pathlib import Path
@@ -19,17 +15,14 @@ from version import VERSION  # noqa: E402
 
 datas = [
     (str(ROOT / "siard_workflow" / "sources"), "siard_workflow/sources"),
+    (str(ROOT / "siard_workflow" / "models"), "siard_workflow/models"),
     (str(ROOT / "config_example.json"), "."),
 ]
 binaries = []
-# Programmets egne moduler importeres mye «lat» (inne i funksjoner) — ta med alle
 hiddenimports = (collect_submodules("siard_workflow") + collect_submodules("gui")
                  + ["app_paths", "dependencies", "settings", "version",
                     "disk_selector", "selftest"])
 
-# Tredjepartspakker: moduler + datafiler (temaer, maler, fonter) + DLL-er
-# (tkdnd, libmagic, MuPDF). Valgfrie tillegg tas med når de er installert i
-# byggemiljøet.
 for pkg in ("customtkinter", "tkinterdnd2", "reportlab", "pymupdf", "fitz", "lxml",
             "olefile", "msoffcrypto", "docx", "mailmerge", "psutil",
             "py7zr", "rarfile", "magic"):
@@ -37,7 +30,6 @@ for pkg in ("customtkinter", "tkinterdnd2", "reportlab", "pymupdf", "fitz", "lxm
         d, b, h = collect_all(pkg)
     except Exception:
         continue
-    # lxml: ISO-Schematron-ressursene brukes ikke og gir unødig lange stier
     datas += [x for x in d if "isoschematron" not in x[0]]
     binaries += b
     hiddenimports += [m for m in h if "isoschematron" not in m]
@@ -49,13 +41,12 @@ a = Analysis(
     datas=datas,
     hiddenimports=hiddenimports,
     excludes=["tests", "testsiard", "weasyprint", "PyInstaller", "pytest",
-              "lxml.isoschematron",   # ubrukt; lengste filstier i pakken
-              "matplotlib", "IPython", "gui.app_backup", "siard_workflow.examples"],
+              "lxml.isoschematron", "matplotlib", "IPython", "gui.app_backup",
+              "siard_workflow.examples"],
     noarchive=False,
 )
 pyz = PYZ(a.pure)
 
-# Windows-versjonsinfo (Egenskaper → Detaljer)
 _v = tuple(int(x) for x in (VERSION.split(".") + ["0"] * 4)[:4])
 try:
     from PyInstaller.utils.win32.versioninfo import (
@@ -80,7 +71,7 @@ exe = EXE(
     [],
     exclude_binaries=True,
     name="SIARDManager",
-    console=False,          # GUI uten konsollvindu (som pythonw)
+    console=False,
     upx=False,
     version=version_info,
 )

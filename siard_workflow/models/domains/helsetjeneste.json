@@ -1,0 +1,18 @@
+{
+  "format_version": 1,
+  "id": "helsetjeneste",
+  "label": "Helsetjeneste",
+  "category_code": "6-16",
+  "status": "draft",
+  "modules": [
+    "person",
+    "contact_info",
+    "client_registry",
+    "event_log",
+    "document",
+    "file_reference",
+    "access_control",
+    "service"
+  ],
+  "description": "Konseptuell fagmodell under utvikling. Fysisk systemkartlegging krever ekstern, godkjent adapter."
+}

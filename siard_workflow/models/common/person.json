@@ -1,0 +1,32 @@
+{
+  "format_version": 1,
+  "id": "person",
+  "label": "Person og roller",
+  "description": "Generisk arbeidsmodell. Ikke en normativ kravliste eller fysisk databaseskjema.",
+  "entities": [
+    {
+      "id": "person",
+      "label": "Person",
+      "aliases": [
+        "person",
+        "personregister"
+      ]
+    },
+    {
+      "id": "organization",
+      "label": "Organisasjon",
+      "aliases": [
+        "organisasjon",
+        "virksomhet"
+      ]
+    },
+    {
+      "id": "actor_role",
+      "label": "Person-/aktorrolle",
+      "aliases": [
+        "rolle",
+        "personrolle"
+      ]
+    }
+  ]
+}

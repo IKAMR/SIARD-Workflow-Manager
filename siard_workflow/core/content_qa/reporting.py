@@ -147,6 +147,22 @@ def _pdf_qa(result: dict, output: Path) -> None:
                       ('Kjørt', E(result['created_at'].replace('T', ' ')[:19])),
                       ('Modus', 'Skrivebeskyttet, full radskann' if result['scan_rows']
                        else 'Skrivebeskyttet, kun katalog')])
+    model = result.get('model_context') or {}
+    if model.get('mode') == 'domain':
+        story += tk.section('Generisk fagmodell og adapter')
+        story.append(tk.kv_table([
+            ('Fagmodell', E(model.get('domain_id'))),
+            ('Moduler', E(', '.join(model.get('module_ids') or []))),
+            ('Adapter', E(model.get('adapter_id') or 'Ingen valgt')),
+            ('Godkjente bindinger', str(model.get('bindings_applied', 0))),
+            ('Ubekreftede forslag', str(model.get('bindings_pending', 0))),
+            ('Modell SHA-256', E((model.get('model_sha256') or '')[:16]) + '...'),
+            ('Adapter SHA-256', E((model.get('adapter_sha256') or '')[:16]) + '...'
+             if model.get('adapter_sha256') else 'Ingen'),
+        ]))
+        story.append(tk.note(
+            'Generiske fagbegreper er arbeidsmodeller, ikke en standardgodkjenning. '
+            'Bare eksplisitt godkjente adapterbindinger er aktivert.', 'warn'))
     story += tk.section('Samlet vurdering')
     story.append(tk.status_box(
         verdict,

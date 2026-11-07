@@ -1,0 +1,19 @@
+{
+  "format_version": 1,
+  "id": "barnevern",
+  "label": "Barnevern",
+  "category_code": "6-14",
+  "status": "draft",
+  "modules": [
+    "person",
+    "contact_info",
+    "client_registry",
+    "case",
+    "event_log",
+    "document",
+    "file_reference",
+    "access_control",
+    "service"
+  ],
+  "description": "Konseptuell fagmodell under utvikling. Fysisk systemkartlegging krever ekstern, godkjent adapter."
+}

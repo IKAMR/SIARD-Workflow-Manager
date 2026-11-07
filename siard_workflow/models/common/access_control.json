@@ -1,0 +1,31 @@
+{
+  "format_version": 1,
+  "id": "access_control",
+  "label": "Tilgang og skjerming",
+  "description": "Generisk arbeidsmodell. Ikke en normativ kravliste eller fysisk databaseskjema.",
+  "entities": [
+    {
+      "id": "access_rule",
+      "label": "Tilgangsregel",
+      "aliases": [
+        "tilgangskode",
+        "tilgangsregel"
+      ]
+    },
+    {
+      "id": "restriction",
+      "label": "Skjerming/begrensning",
+      "aliases": [
+        "skjerming",
+        "gradering"
+      ]
+    },
+    {
+      "id": "permission_event",
+      "label": "Tilgangshendelse",
+      "aliases": [
+        "tilgangslogg"
+      ]
+    }
+  ]
+}

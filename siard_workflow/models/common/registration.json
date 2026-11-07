@@ -1,0 +1,33 @@
+{
+  "format_version": 1,
+  "id": "registration",
+  "label": "Registrering og journalpost",
+  "description": "Generisk arbeidsmodell. Ikke en normativ kravliste eller fysisk databaseskjema.",
+  "entities": [
+    {
+      "id": "registration",
+      "label": "Registrering",
+      "aliases": [
+        "registrering"
+      ]
+    },
+    {
+      "id": "journal_post",
+      "label": "Journalpost",
+      "aliases": [
+        "journpost",
+        "journalpost",
+        "jp"
+      ]
+    },
+    {
+      "id": "correspondence_party",
+      "label": "Korrespondansepart",
+      "aliases": [
+        "avsmot",
+        "avsender",
+        "mottaker"
+      ]
+    }
+  ]
+}
