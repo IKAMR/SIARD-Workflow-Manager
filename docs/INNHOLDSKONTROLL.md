@@ -1,6 +1,6 @@
 # Innholdskontroll (QA) - rammeverk og ePhorte-pilot
 
-**Utviklingssprint:** `v1.4.22-ikamr-04-a2` (bygger videre på a1)  
+**Utviklingssprint:** `v1.4.23-ikamr-04-a3` (bygger videre på a1/a2)  
 **Gren:** `feature/innholdskontroll`  
 **Status:** Rammeverk/pilot - ikke arkivfaglig ferdigkontrollert.
 
@@ -9,6 +9,40 @@
 Kontrollere antall og kvalitet på informasjonsbærere i et SIARD-uttrekk. Motoren er **generisk og skrivebeskyttet**. All faglig tolkning av ePhorte, Noark 4/5, barnevern, helse, skole osv. skal defineres i et JSON-malsett, ikke hardkodes i Python.
 
 Dette er **ikke** en Noark 5-validering og erstatter ikke Arkade 5, DBPTK eller sammenligning med produksjonssystemet. Første sprint leverer faktisk kode for SIARD-opptellinger, databaserelasjoner i QA-mal og rapportering, **ikke** ferdig fysisk kartlegging av ePhorte-tabeller.
+
+## Nytt i a3: Velg QA-kilde (utpakket SIARD eller SIARD-fil)
+
+Innholdskontroll kan lese **begge** kildetyper. Brukeren velger under
+**Innhold → Innholdskontroll → Kilde for innholdskontroll**. Kildevalget lagres
+som en del av operasjonsparametrene i profil/prosjekt og beholdes ved gjenåpning.
+
+| Kildevalg | Hva skjer |
+|---|---|
+| **Automatisk** (standard) | Bruk en gyldig utpakket SIARD-arbeidsmappe fra `Pakk ut SIARD`, dersom den fremdeles er tilgjengelig. Ellers bruk aktiv `.siard`-fil, for eksempel etter `Pakk sammen SIARD`. |
+| **Utpakket SIARD** | Bruk utpakket mappe fra arbeidsflyten eller manuelt valgt mappe. Hvis den ikke finnes, meldes feil. Det skjer **ingen stille tilbakekobling** til SIARD-filen. |
+| **SIARD-fil** | Bruk aktiv SIARD-fil fra arbeidsflyten, også dersom det finnes en utpakket arbeidsmappe. |
+
+**Utpakket SIARD-mappe (valgfri):** Velg en eksisterende rotmappe som inneholder
+`header/metadata.xml` dersom du vil analysere en mappe som ikke ble produsert
+av arbeidsflytens `Pakk ut SIARD`. Dette overstyrer arbeidsflytens utpakkede
+mappe i **Automatisk** og **Utpakket SIARD**, men ikke i **SIARD-fil**.
+Ugyldig manuelt valgt mappe gir feil, ikke et stille bytte til en annen kilde.
+
+**Eksempler på rekkefølge:**
+
+- `Pakk ut SIARD → rettinger/konvertering → Innholdskontroll → Pakk sammen SIARD`
+  gir kontroll mot arbeidskopien som senere pakkes. Bruk *Automatisk* eller
+  *Utpakket SIARD*.
+- `Pakk ut SIARD → rettinger/konvertering → Pakk sammen SIARD → Innholdskontroll`
+  gir kontroll av den nye, ferdigpakkede SIARD-filen. Bruk *Automatisk* eller
+  *SIARD-fil*.
+- Med bare en SIARD-fil i køen kan QA kjøres alene. Bruk *Automatisk* eller
+  *SIARD-fil*. En selvstendig, utpakket mappe kan velges under mappeparameteren.
+
+**Sporbarhet:** Kildevalg, faktisk kildetype, kildens navn og opprinnelse vises
+både i QA-rapportens forside, JSON-resultatet og kjøreloggen. Rapportfilene
+navngis etter SIARD-filen i køen, ikke etter et tilfeldig navn på temp-mappen.
+QA endrer aldri utpakket mappe eller SIARD-fil.
 
 ## Levert i a1
 
@@ -127,11 +161,16 @@ Legg inn `source` og `key` i kopien av JSON-malen for ditt **faktiske** uttrekk.
 
 Under **Innhold** velges **Innholdskontroll (QA - informasjonsbærere)**:
 
+- **Kilde for innholdskontroll:** `Automatisk`, `Utpakket SIARD` eller `SIARD-fil`.
+- **Utpakket SIARD-mappe:** Tom betyr at arbeidsflytens mappe brukes, dersom den finnes.
 - **QA-mal (JSON)**: Tom filsti bruker ePhorte-kartleggingsmalen. For en virkelig fagkontroll velger du din kartlagte profil.
 - **Tell og kontroller alle tabellrader**: `Ja` (standard) strømmer alle tabeller. `Nei` gir katalog og `DELVIS_KONTROLLERT`.
 - **Kontroller primærnøkler fra SIARD-metadata**: `Ja` (standard) kontrollerer eksisterende PK-definisjoner med en midlertidig diskindeks. Deaktivering gir `DELVIS_KONTROLLERT` for tabeller der PK-kontroll da utelates.
 
-**Anbefalt arbeidsflyt:** Pakk ut SIARD → eventuelle endringer → Pakk sammen SIARD → **Innholdskontroll** → Kjørerapport (PDF) → eventuelle Depotrapporter. Operasjonen kan også brukes direkte uten utpakking hvis en ferdig SIARD-fil ligger i køen.
+**Anbefalt arbeidsflyt:** Velg plassering etter hva du vil kontrollere:
+**før sammenpakking** for den utpakkede arbeidskopien, eller **etter sammenpakking**
+for den ferdigpakkede SIARD-filen. Se kildevalgene i a3-seksjonen over.
+Kjørerapport og eventuelle Depotrapporter kan legges etter QA-steget.
 
 **Merk:** Et prosjekt med alle stegene markert fullført vil hoppe over kjøringen. Bruk et nytt prosjekt eller nullstill kontrollsteget når du skal analysere uttrekket på nytt.
 

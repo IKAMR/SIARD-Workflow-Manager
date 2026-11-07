@@ -18,7 +18,8 @@ class ContentQAOperation(BaseOperation):
         'kartlegging og relasjonsfeil. Lager JSON, CSV og PDF. '
         'Foreslår tabell-/nøkkelkoblinger og leser deklarerte fremmednøkler '
         'fra SIARD-metadata uten å godkjenne forslagene automatisk. '
-        'Kan kjøres etter Pakk sammen SIARD, før Kjørerapport.'
+        'Kildevalg: automatisk, utpakket SIARD eller SIARD-fil. '
+        'Kan kjøres før eller etter Pakk sammen SIARD.'
     )
     category = 'Innhold'
     status = 1  # Pilot/beta, not a complete validated QA product.
@@ -28,10 +29,62 @@ class ContentQAOperation(BaseOperation):
     halt_on_failure = False
 
     default_params = {
+        'source_mode': 'Automatisk',
+        'unpacked_dir': '',
         'profile_file': '',
         'scan_rows': True,
         'check_metadata_pk': True,
     }
+
+    SOURCE_MODES = ('Automatisk', 'Utpakket SIARD', 'SIARD-fil')
+
+    def _select_source(self, ctx: WorkflowContext) -> tuple[Path, str, str, str]:
+        """Velg faktisk datakilde uten å endre den.
+
+        Returnerer (sti, kildetype, brukerens valg, opprinnelse).
+        En eksplisitt mappe må være gyldig; vi faller aldri stille tilbake
+        til en annen kilde dersom operatøren har oppgitt feil mappe.
+        """
+        mode = str(self.params.get('source_mode') or 'Automatisk').strip()
+        if mode not in self.SOURCE_MODES:
+            raise ValueError(f'Ukjent QA-kildevalg: {mode!r}')
+
+        raw_dir = str(self.params.get('unpacked_dir') or '').strip()
+        selected_folder = Path(raw_dir).expanduser() if raw_dir else None
+        workflow_folder = (Path(ctx.extracted_path)
+                           if ctx.extracted_path is not None else None)
+
+        def valid_folder(folder: Path, *, explicit: bool) -> bool:
+            if not folder.is_dir():
+                if explicit or mode == 'Utpakket SIARD':
+                    raise FileNotFoundError(f'Utpakket SIARD-mappe finnes ikke: {folder}')
+                return False
+            if not ((folder / 'header' / 'metadata.xml').is_file()
+                    or (folder / 'metadata.xml').is_file()):
+                raise ValueError(
+                    f'Mappen er ikke en utpakket SIARD (mangler metadata.xml): {folder}')
+            return True
+
+        if mode != 'SIARD-fil':
+            if selected_folder is not None:
+                valid_folder(selected_folder, explicit=True)
+                return selected_folder, 'utpakket_siard', mode, 'Manuelt valgt mappe'
+            if workflow_folder is not None and valid_folder(workflow_folder, explicit=False):
+                return workflow_folder, 'utpakket_siard', mode, 'Arbeidsflytens utpakking'
+            # Direkte API-kjøring kan angi en utpakket mappe som aktiv kilde.
+            active_source = Path(ctx.siard_path)
+            if active_source.is_dir() and valid_folder(active_source, explicit=True):
+                return active_source, 'utpakket_siard', mode, 'Aktiv utpakket SIARD-mappe'
+            if mode == 'Utpakket SIARD':
+                raise ValueError(
+                    'Utpakket SIARD er valgt, men ingen mappe er tilgjengelig. '
+                    'Legg Innholdskontroll etter «Pakk ut SIARD», eller velg en '
+                    'utpakket mappe i operasjonens innstillinger.')
+
+        archive = Path(ctx.siard_path)
+        if not archive.is_file():
+            raise FileNotFoundError(f'SIARD-fil finnes ikke: {archive}')
+        return archive, 'siard_fil', mode, 'Aktiv SIARD-fil i arbeidsflyten'
 
     def run(self, ctx: WorkflowContext) -> OperationResult:
         log = ctx.metadata.get('file_logger')
@@ -44,12 +97,16 @@ class ContentQAOperation(BaseOperation):
                 progress_cb('log', msg=msg, level=level)
 
         try:
-            source = Path(ctx.siard_path)
+            source, source_type, source_mode, source_origin = self._select_source(ctx)
             profile_path = str(self.params.get('profile_file') or '').strip()
             profile = load_profile(profile_path)
             scan = bool(self.params.get('scan_rows', True))
             stop_event = ctx.metadata.get('stop_event')
-            message(f'  Innholdskontroll: {source.name}; profil: {profile["id"]}')
+            source_label = ('Utpakket SIARD' if source_type == 'utpakket_siard'
+                            else 'SIARD-fil')
+            message(f'  Innholdskontroll: {source_label} ({source_mode}); '
+                    f'profil: {profile["id"]}')
+            message(f'  QA-kilde ({source_origin}): {source}')
             result = run_content_qa(
                 source, profile, scan_rows=scan,
                 check_metadata_pk=bool(self.params.get('check_metadata_pk', True)),
@@ -57,11 +114,21 @@ class ContentQAOperation(BaseOperation):
                 should_stop=stop_event.is_set if stop_event else None,
                 temp_dir=ctx.metadata.get('temp_dir'),
             )
-            output_dir = Path(ctx.metadata.get('log_dir') or source.parent)
-            paths = write_qa_reports(result, output_dir, source.stem)
+            # Rapporter beholdes utenfor SIARD-arbeidsmappen (den kan slettes
+            # av repack-steget). Filnavn følger opprinnelig SIARD, ikke temp-mappen.
+            result['source_type'] = source_type
+            result['source_selection'] = source_mode
+            result['source_origin'] = source_origin
+            result['input_siard_name'] = Path(ctx.siard_path).name
+            output_dir = Path(ctx.metadata.get('log_dir') or Path(ctx.siard_path).parent)
+            paths = write_qa_reports(result, output_dir, Path(ctx.siard_path).stem)
             summary = result['summary']
             data = {
                 'qa_status': result['status'],
+                'qa_source_type': source_type,
+                'qa_source_mode': source_mode,
+                'qa_source_origin': source_origin,
+                'qa_source_name': source.name,
                 'qa_tables': summary['tables'],
                 'qa_tables_verified': summary['tables_verified'],
                 'qa_tables_with_errors': summary['tables_with_errors'],

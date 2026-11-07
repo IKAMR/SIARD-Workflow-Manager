@@ -136,7 +136,12 @@ def _pdf_qa(result: dict, output: Path) -> None:
     kind = {'GODKJENT': 'ok', 'DELVIS_KONTROLLERT': 'warn', 'AVVIK': 'fail'}[status]
     story = tk.cover('INNHOLDSKONTROLL',
                      'SIARD Workflow Manager - kontroll av informasjonsbærere',
-                     [('SIARD-uttrekk', E(result['source_name'])),
+                     [('SIARD-uttrekk', E(result.get('input_siard_name') or result['source_name'])),
+                      ('Kontrollert kilde', E(result['source_name'])),
+                      ('Kildetype', E('Utpakket SIARD' if result.get('source_type') == 'utpakket_siard'
+                                       else 'SIARD-fil')),
+                      ('Kildevalg', E(result.get('source_selection', 'Direkte angitt'))),
+                      ('Kilde fra', E(result.get('source_origin', 'Angitt ved oppstart'))),
                       ('QA-mal', E(result['profile_label'])),
                       ('Mal-ID', E(result['profile_id'])),
                       ('Kjørt', E(result['created_at'].replace('T', ' ')[:19])),

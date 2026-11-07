@@ -683,10 +683,16 @@ OP_DEFS = [
             "relasjoner og status-/årsfordelinger der malsettet er kartlagt. "
             "Skrivebeskyttet: endrer aldri SIARD. Lager PDF, CSV og JSON. "
             "Tom malfil bruker ePhorte-kartleggingsmalen (ikke automatisk godkjent). "
-            "Legges etter Pakk sammen SIARD og før Kjørerapport."
+            "Kan kontrollere utpakket SIARD før sammenpakking eller SIARD-fil "
+            "etter sammenpakking. Kilden velges i innstillingene."
         ),
         "status": ContentQAOperation.status,
         "params": [
+            {"key": "source_mode", "label": "Kilde for innholdskontroll",
+             "type": "choice", "choices": ["Automatisk", "Utpakket SIARD", "SIARD-fil"],
+             "default": "Automatisk"},
+            {"key": "unpacked_dir", "label": "Utpakket SIARD-mappe (valgfri)",
+             "type": "folder", "default": ""},
             {"key": "profile_file", "label": "QA-mal (JSON, tom = ePhorte-kartlegging)",
              "type": "file", "default": ""},
             {"key": "scan_rows", "label": "Tell og kontroller alle tabellrader",
