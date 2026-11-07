@@ -204,10 +204,12 @@ def load_adapter(path: str | Path, *, resource_root: str | Path | None = None) -
     resolved = _resource_file(path, resource_root)
     adapter = _fields(_read(resolved),
                       {'format_version', 'id', 'label', 'domain_id', 'visibility',
-                       'system_hint', 'bindings', 'relations', 'description'}, 'adapter')
+                       'system_hint', 'standard_id', 'bindings', 'relations', 'description'}, 'adapter')
     _format(adapter, 'adapter')
     _identifier(adapter.get('id'), 'adapter.id')
     _identifier(adapter.get('domain_id'), 'adapter.domain_id')
+    if adapter.get('standard_id') is not None:
+        _identifier(adapter['standard_id'], 'adapter.standard_id')
     _required_text(adapter.get('label'), 'adapter.label')
     if adapter.get('visibility') not in ('internal', 'public', 'restricted'):
         raise ModelError('adapter.visibility: intern, offentlig eller begrenset')
@@ -217,7 +219,7 @@ def load_adapter(path: str | Path, *, resource_root: str | Path | None = None) -
     seen = set()
     for entry in bindings:
         _fields(entry, {'entity_id', 'review_status', 'source', 'key', 'aliases',
-                        'status_column', 'date_column', 'expected_count'}, 'adapter.binding')
+                        'status_column', 'date_column', 'expected_count', 'distinct_metrics'}, 'adapter.binding')
         entity_id = _identifier(entry.get('entity_id'), 'adapter.binding.entity_id')
         if entity_id in seen:
             raise ModelError(f'Flere mappinger til samme fagbegrep: {entity_id}')
@@ -295,7 +297,7 @@ def resolve_qa_model(*, domain: str = LEGACY, adapter_file: str = '',
                                    'source': binding.get('source'),
                                    'key': binding.get('key', []),
                                    **{x: binding[x] for x in ('status_column', 'date_column',
-                                                              'expected_count', 'aliases') if x in binding}}],
+                                                              'expected_count', 'aliases', 'distinct_metrics') if x in binding}}],
                      'relations': []}
             try:
                 validate_profile(check)
@@ -305,7 +307,7 @@ def resolve_qa_model(*, domain: str = LEGACY, adapter_file: str = '',
                 pending += 1
                 continue
             target = by_id[concept]
-            for attr in ('source', 'key', 'status_column', 'date_column', 'expected_count'):
+            for attr in ('source', 'key', 'status_column', 'date_column', 'expected_count', 'distinct_metrics'):
                 if attr in binding:
                     target[attr] = deepcopy(binding[attr])
             # Aliases are stable domain knowledge, not proprietary field names.
@@ -327,6 +329,7 @@ def resolve_qa_model(*, domain: str = LEGACY, adapter_file: str = '',
                'model_sha256': model['model_sha256'],
                'adapter_id': adapter['id'] if adapter else None,
                'adapter_sha256': digest,
+               'standard_id': adapter.get('standard_id') if adapter else None,
                'adapter_visibility': adapter['visibility'] if adapter else None,
                'bindings_applied': applied, 'bindings_pending': pending,
                'mapping_policy': 'only_explicitly_approved_bindings_execute'}

@@ -63,10 +63,14 @@ def write_qa_reports(result: dict, output_dir: str | Path, stem: str) -> dict[st
             'pdf': Path(f'{path}.pdf'),
         }
     paths = files_for(candidate)
+    if result.get('semantic_results') is not None:
+        paths['semantic_metrics_csv'] = Path(f'{candidate}_faglige_metrikker.csv')
     while any(path.exists() for path in paths.values()):
         candidate = output_dir / f'{safe_stem}_{ts}_innholdskontroll_{index:02d}'
         index += 1
         paths = files_for(candidate)
+        if result.get('semantic_results') is not None:
+            paths['semantic_metrics_csv'] = Path(f'{candidate}_faglige_metrikker.csv')
     paths['json'].write_text(json.dumps(result, ensure_ascii=False,
                                         indent=2) + '\n', encoding='utf-8')
     _write_csv(paths['tables_csv'],
@@ -75,7 +79,7 @@ def write_qa_reports(result: dict, output_dir: str | Path, stem: str) -> dict[st
                 for x in result['catalog']])
     _write_csv(paths['carriers_csv'],
                ['id', 'label', 'table', 'status', 'rows', 'unique',
-                'missing_key', 'duplicate_key', 'notes', 'status_distribution', 'year_distribution'],
+                'missing_key', 'duplicate_key', 'notes', 'status_distribution', 'year_distribution', 'distinct_counts', 'distinct_missing'],
                result['carriers'])
     _write_csv(paths['findings_csv'],
                ['check_id', 'scope', 'status', 'count', 'severity', 'detail'],
@@ -119,6 +123,13 @@ def write_qa_reports(result: dict, output_dir: str | Path, stem: str) -> dict[st
                ['origin', 'child_schema', 'child_table', 'child_columns',
                 'parent_schema', 'parent_table', 'parent_columns', 'status',
                 'note'], discovery.get('relation_proposals', []))
+    semantic = result.get('semantic_results') or {}
+    if 'semantic_metrics_csv' in paths:
+        _write_csv(paths['semantic_metrics_csv'],
+                   ['metric_id', 'concept_id', 'scope', 'value', 'unit', 'state', 'method',
+                    'source_table', 'legacy_sql_reference_id', 'legacy_sql_previous_id',
+                    'legacy_sql_execution',
+                    'excluded_null_rows'], semantic.get('metrics', []))
     _pdf_qa(result, paths['pdf'])
     return {k: str(p) for k, p in paths.items()}
 
@@ -249,6 +260,21 @@ def _pdf_qa(result: dict, output: Path) -> None:
                 story.append(tk.note('Kun 20 av relasjonsforslagene vises; '
                                      'se relasjonsforslag.csv.', 'info'))
 
+    semantic = result.get('semantic_results') or {}
+    if semantic.get('metrics'):
+        story += tk.section('Noark 4 - faglige opptellinger (pilot)')
+        story.append(tk.note('Bare faglige tall fra eksplisitt godkjente adapterbindinger '
+                             'vises som målt. Historiske SQL-referanser er IKKE kjørt. '
+                             'DOKVERSJON-rader kan representere versjon og variant; '
+                             'unike versjoner krever særskilt godkjent DISTINCT-projeksjon.', 'warn'))
+        sm_rows = []
+        for item in semantic['metrics']:
+            sm_rows.append([E(item['metric_id']),
+                            '-' if item['value'] is None else fmt_int(item['value']),
+                            E(item['unit']), E(item['state'])])
+        story.append(tk.data_table(['Måling', 'Antall', 'Enhet', 'Status'], sm_rows,
+                                   [tk.inner_w * x for x in (.40,.14,.26,.20)],
+                                   font_size=7.5, right_cols=[1]))
     story += tk.section('Informasjonsbaerere og opptellinger')
     if result['carriers']:
         rows = []

@@ -51,7 +51,7 @@ def validate_profile(profile: dict) -> dict:
         if not isinstance(item, dict):
             raise ProfileError('Hver informasjonsbærer må være et JSON-objekt')
         _known_fields(item, {'id','label','description','aliases','source','key','status_column',
-                             'date_column','expected_count'}, 'carrier')
+                             'date_column','expected_count','distinct_metrics'}, 'carrier')
         name = _string(item.get('id'), 'carrier.id')
         _string(item.get('label'), 'carrier.label')
         if name in seen:
@@ -77,6 +77,24 @@ def validate_profile(profile: dict) -> dict:
         for field in ('status_column', 'date_column'):
             if item.get(field) is not None:
                 _string(item[field], f'{name}.{field}')
+        distinct = item.get('distinct_metrics', [])
+        if not isinstance(distinct, list) or len(distinct) > 20:
+            raise ProfileError(f'{name}.distinct_metrics: forventer maks 20 metrikker')
+        seen_distinct = set()
+        for metric in distinct:
+            if not isinstance(metric, dict):
+                raise ProfileError(f'{name}.distinct_metrics må inneholde objekter')
+            _known_fields(metric, {'id', 'columns'}, f'{name}.distinct_metrics')
+            metric_id = _string(metric.get('id'), f'{name}.distinct_metrics.id')
+            if not metric_id.replace('_', '').isalnum() or metric_id in seen_distinct:
+                raise ProfileError(f'{name}: ugyldig eller duplikat distinct-ID')
+            seen_distinct.add(metric_id)
+            fields = metric.get('columns')
+            if not isinstance(fields, list) or not fields or len(fields) > 12 or any(
+                    not isinstance(c, str) or not c.strip() for c in fields):
+                raise ProfileError(f'{name}.{metric_id}: krever 1-12 kolonner')
+            if len(fields) != len(set(fields)):
+                raise ProfileError(f'{name}.{metric_id}: duplikat kolonnenavn')
         ex = item.get('expected_count')
         if ex is not None:
             if not isinstance(ex, dict) or not ex or not set(ex).issubset({'exact','min','max'}):

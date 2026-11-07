@@ -1,0 +1,13 @@
+{
+  "format_version": 1,
+  "id": "archive_structure",
+  "label": "Arkiv og klassifikasjonsstruktur",
+  "description": "Generisk arbeidsmodell for arkivstruktur. Ikke en Noark-godkjenning eller fysisk systemkartlegging.",
+  "entities": [
+    {"id": "archive", "label": "Arkiv", "aliases": ["arkiv", "arkivenhet"]},
+    {"id": "archive_part", "label": "Arkivdel", "aliases": ["arkivdel", "delarkiv"]},
+    {"id": "archive_period", "label": "Arkivperiode", "aliases": ["arkivperiode", "periode"]},
+    {"id": "classification_scheme", "label": "Ordningsprinsipp / klassifikasjonssystem", "aliases": ["ordnprins", "ordningsprinsipp", "klassifikasjonssystem"]},
+    {"id": "classification_value", "label": "Ordningsverdi / klasse", "aliases": ["ordnverdi", "ordningsverdi", "klasse"]}
+  ]
+}

@@ -9,6 +9,7 @@ from .engine import run_content_qa
 from .model_catalog import (LEGACY, ModelError, list_domain_models,
                             resolve_qa_model, inspect_resource_library)
 from .reporting import write_qa_reports
+from .semantic_results import build_noark4_metrics
 
 
 def main(argv=None) -> int:
@@ -48,6 +49,7 @@ def main(argv=None) -> int:
                                 check_metadata_pk=not args.skip_metadata_pk,
                                 on_progress=lambda msg: print(msg, flush=True))
         result['model_context'] = model_context
+        result['semantic_results'] = build_noark4_metrics(result, model_context)
         result['resource_library'] = library
         result['input_siard_name'] = source.name
         output = Path(args.out) if args.out else source.parent

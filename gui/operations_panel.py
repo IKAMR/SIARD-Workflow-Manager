@@ -685,7 +685,7 @@ OP_DEFS = [
             "Tom malfil bruker ePhorte-kartleggingsmalen (ikke automatisk godkjent). "
             "Kan kontrollere utpakket SIARD før sammenpakking eller SIARD-fil "
             "etter sammenpakking. Kilden velges i innstillingene. "
-            "A4: velg generisk fagmodell og eventuell privat JSON-adapter; "
+            "A4/A5: generisk fagmodell, privat adapter og valgfritt ePhorte/Noark4-forslag; "
             "ubekreftede forslag brukes ikke i kontrollen."
         ),
         "status": ContentQAOperation.status,
@@ -704,6 +704,9 @@ OP_DEFS = [
              "type": "folder", "default": ""},
             {"key": "adapter_file", "label": "Ekstern systemadapter (JSON, valgfri)",
              "type": "file", "default": ""},
+            {"key": "propose_ephorte_noark4_adapter",
+             "label": "Lag ePhorte/Noark 4-adapterforslag i fagressursbiblioteket (krever saksarkiv)",
+             "type": "bool", "default": False},
             {"key": "profile_file", "label": "Gammel QA-mal (JSON, kun legacy)",
              "type": "file", "default": ""},
             {"key": "scan_rows", "label": "Tell og kontroller alle tabellrader",

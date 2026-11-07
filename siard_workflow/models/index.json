@@ -9,6 +9,10 @@
       "path": "common/access_control.json"
     },
     {
+      "id": "archive_structure",
+      "path": "common/archive_structure.json"
+    },
+    {
       "id": "case",
       "path": "common/case.json"
     },

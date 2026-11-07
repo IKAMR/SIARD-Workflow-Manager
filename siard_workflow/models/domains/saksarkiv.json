@@ -5,6 +5,7 @@
   "category_code": "1-01",
   "status": "draft",
   "modules": [
+    "archive_structure",
     "case",
     "registration",
     "document",

@@ -128,7 +128,7 @@ def run_content_qa(
                             'status': 'IKKE_KONTROLLERT', 'rows': None,
                             'unique': None, 'missing_key': None, 'duplicate_key': None,
                             'status_distribution': {}, 'year_distribution': {},
-                            'notes': ''}
+                            'distinct_counts': {}, 'distinct_missing': {}, 'notes': ''}
             carriers.append(entity)
             carrier_map[c['id']] = entity
             mapping = c.get('source')
@@ -147,6 +147,7 @@ def run_content_qa(
                 continue
             relevant = list(c.get('key') or [])
             relevant += [c[f] for f in ('status_column', 'date_column') if c.get(f)]
+            relevant += [x for m in c.get('distinct_metrics', []) for x in m['columns']]
             if not _columns_ok(relevant, table):
                 missing_carriers += 1
                 entity['notes'] = 'Én eller flere kartlagte kolonner finnes ikke i SIARD-tabellen'
@@ -200,7 +201,8 @@ def run_content_qa(
                 db.execute('CREATE TABLE references_ (relation TEXT NOT NULL, key_hash BLOB NOT NULL)')
                 tracked_relations = {r['id']: r for r in relations}
                 stats = {c['id']: {'total': 0, 'unique': 0, 'null': 0, 'duplicates': 0,
-                                   'status': Counter(), 'year': Counter()}
+                                   'status': Counter(), 'year': Counter(),
+                                   'distinct': Counter(), 'distinct_missing': Counter()}
                          for c in profile['carriers']}
                 rel_counts = {r['id']: {'references': 0, 'missing': 0} for r in profile.get('relations', [])}
                 for t in tables:
@@ -267,6 +269,18 @@ def run_content_qa(
                                             st['unique'] += 1
                                         else:
                                             st['duplicates'] += 1
+                                for metric in c.get('distinct_metrics', []):
+                                    group = tuple(row.get(name) for name in metric['columns'])
+                                    if any(v is None for v in group):
+                                        # NULL is excluded but explicitly accounted for.
+                                        st['distinct_missing'][metric['id']] += 1
+                                        continue
+                                    unique_id = 'distinct::' + c['id'] + '::' + metric['id']
+                                    cur = db.execute(
+                                        'INSERT OR IGNORE INTO unique_keys(entity,key_hash) VALUES (?,?)',
+                                        (unique_id, _fingerprint(secret, group)))
+                                    if cur.rowcount:
+                                        st['distinct'][metric['id']] += 1
                                 if c.get('status_column'):
                                     s = row.get(c['status_column'])
                                     _add_distribution(st['status'], s)
@@ -349,6 +363,10 @@ def run_content_qa(
                         entity['status'] = 'IKKE_KONTROLLERT'
                         finding('carrier_key_unmapped', c['id'], 'IKKE_KONTROLLERT', 0,
                                 entity['notes'])
+                    entity['distinct_counts'] = {m['id']: st['distinct'][m['id']]
+                                                 for m in c.get('distinct_metrics', [])}
+                    entity['distinct_missing'] = {m['id']: st['distinct_missing'][m['id']]
+                                                  for m in c.get('distinct_metrics', [])}
                     entity['status_distribution'] = _limit_distribution(st['status'])
                     entity['year_distribution'] = _limit_distribution(st['year'])
                     expected = c.get('expected_count')

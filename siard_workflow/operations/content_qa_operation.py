@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from datetime import datetime
 
 from siard_workflow.core.base_operation import BaseOperation, OperationResult
 from siard_workflow.core.context import WorkflowContext
@@ -10,6 +11,8 @@ from siard_workflow.core.content_qa.reporting import write_qa_reports
 from siard_workflow.core.content_qa.model_catalog import (
     resolve_qa_model, inspect_resource_library, LEGACY,
 )
+from siard_workflow.core.content_qa.semantic_results import build_noark4_metrics
+from siard_workflow.core.content_qa.ephorte_noark4 import write_private_proposal
 
 
 class ContentQAOperation(BaseOperation):
@@ -23,7 +26,7 @@ class ContentQAOperation(BaseOperation):
         'fra SIARD-metadata uten å godkjenne forslagene automatisk. '
         'Kildevalg: automatisk, utpakket SIARD eller SIARD-fil. '
         'Kan kjøres før eller etter Pakk sammen SIARD. '
-        'A4 har generiske fagmodeller, delte moduler og eksterne JSON-adaptere.'
+        'A5: Noark 4-metrikkoversikt og frivillig ePhorte-adapterforslag fra metadata.'
     )
     category = 'Innhold'
     status = 1  # Pilot/beta, not a complete validated QA product.
@@ -39,6 +42,7 @@ class ContentQAOperation(BaseOperation):
         'domain_profile': LEGACY,
         'adapter_file': '',
         'resources_root': '',
+        'propose_ephorte_noark4_adapter': False,
         'scan_rows': True,
         'check_metadata_pk': True,
     }
@@ -114,6 +118,11 @@ class ContentQAOperation(BaseOperation):
                 resource_root=resources_root,
                 profile_file=profile_path,
             )
+            make_proposal = bool(self.params.get('propose_ephorte_noark4_adapter', False))
+            if make_proposal and (model_context.get('domain_id') != 'saksarkiv' or
+                                  not library.get('configured')):
+                raise ValueError('ePhorte/Noark 4-kartlegging krever fagmodell '
+                                 'saksarkiv og en eksisterende fagressursmappe')
             if library['configured']:
                 message('  Fagressursbibliotek: ekstern mappe er tilgjengelig '
                         '(Decom/KDRS-maler blir ikke lastet automatisk)')
@@ -144,6 +153,22 @@ class ContentQAOperation(BaseOperation):
             result['input_siard_name'] = Path(ctx.siard_path).name
             result['model_context'] = model_context
             result['resource_library'] = library
+            result['semantic_results'] = build_noark4_metrics(result, model_context)
+            private_proposal = None
+            if make_proposal:
+                # Explicit opt-in: never write private physical table/column mapping
+                # to the public application repository or the QA report directory.
+                resource_target = (Path(resources_root).expanduser() / 'adapters' /
+                                   'ephorte' / 'noark4')
+                safe_name = ''.join(x if x.isascii() and x.isalnum() else '_'
+                                    for x in Path(ctx.siard_path).stem)[:40].strip('_') or 'siard'
+                proposal_id = ('ephorte_noark4_' + safe_name.lower() + '_' +
+                               datetime.now().strftime('%Y%m%d_%H%M%S_%f'))
+                private_proposal = write_private_proposal(
+                    result, resource_target, adapter_id=proposal_id)
+                result['adapter_proposal_summary'] = private_proposal['summary']
+                message('  UBEKREFTET ePhorte/Noark 4-adapter lagret utenfor repo: '
+                        + private_proposal['adapter'])
             output_dir = Path(ctx.metadata.get('log_dir') or Path(ctx.siard_path).parent)
             paths = write_qa_reports(result, output_dir, Path(ctx.siard_path).stem)
             summary = result['summary']
@@ -170,6 +195,10 @@ class ContentQAOperation(BaseOperation):
                 'qa_adapter_sha256': model_context['adapter_sha256'],
                 'qa_bindings_approved': model_context['bindings_applied'],
                 'qa_bindings_pending': model_context['bindings_pending'],
+                'qa_standard_id': model_context.get('standard_id'),
+                'qa_semantic_metrics_csv': paths.get('semantic_metrics_csv'),
+                'qa_adapter_proposal_file': private_proposal['adapter'] if private_proposal else None,
+                'qa_adapter_proposal_review': private_proposal['review_csv'] if private_proposal else None,
                 'qa_report_pdf': paths['pdf'],
                 'qa_report_json': paths['json'],
                 'qa_tables_csv': paths['tables_csv'],

@@ -1,0 +1,218 @@
+{
+  "format_version": 1,
+  "id": "noark4_saksarkiv_reference_a5",
+  "label": "Noark 4 saksarkiv - systemuavhengig DTD-navnereferanse",
+  "status": "mapping_proposal_only",
+  "description": "Kobler offentlig Noark 4-entitetsnavngivning til generiske fagbegreper. Ingen kolonnenavn, SQL eller leverandordefinisjoner. Gjenfinning i SIARD-katalogen er bare et forslag.",
+  "sources": [
+    {
+      "id": "n4_dtd",
+      "type": "normative_technical_schema_reference",
+      "url": "https://github.com/IKAMR/schemas/tree/master/N4/v1.0",
+      "verification": "DTD filenames verified in source repository"
+    },
+    {
+      "id": "n4_reference",
+      "type": "local_working_reference",
+      "description": "Noark 4.1 del 2 og noark4-fields-working-reference.xlsx; ikke verifisert som komplett leverandorkartlegging"
+    },
+    {
+      "id": "ephorte_sql",
+      "type": "private_comparison_reference",
+      "description": "Egne SQL-kontroller datert 2023-11-25 og 2025-05-15; originalfiler blir IKKE inkludert"
+    }
+  ],
+  "bindings": [
+    {
+      "entity_id": "archive",
+      "table": "ARKIV",
+      "source_id": "n4_dtd",
+      "dtd": "ARKIV.DTD",
+      "metric_id": "archive.count",
+      "sql_reference_id": "N4.01.01"
+    },
+    {
+      "entity_id": "archive_part",
+      "table": "ARKIVDEL",
+      "source_id": "n4_dtd",
+      "dtd": "ARKIVDEL.DTD",
+      "metric_id": "archive_part.count",
+      "sql_reference_id": "N4.02.01"
+    },
+    {
+      "entity_id": "archive_period",
+      "table": "ARKIVPER",
+      "source_id": "n4_dtd",
+      "dtd": "ARKIVPER.DTD",
+      "metric_id": "archive_period.count",
+      "table_aliases": [
+        "ARKIVPERIODE"
+      ]
+    },
+    {
+      "entity_id": "classification_scheme",
+      "table": "ORDNPRI",
+      "table_aliases": [
+        "ORDNPRINS"
+      ],
+      "source_id": "n4_dtd",
+      "dtd": "ORDNPRI.DTD",
+      "metric_id": "classification_scheme.count",
+      "sql_reference_id": "N4.13.01"
+    },
+    {
+      "entity_id": "classification_value",
+      "table": "ORDNVERD",
+      "table_aliases": [
+        "ORDNVERDI"
+      ],
+      "source_id": "n4_dtd",
+      "dtd": "ORDNVERD.DTD",
+      "metric_id": "classification_value.count"
+    },
+    {
+      "entity_id": "case_file",
+      "table": "NOARKSAK",
+      "source_id": "n4_dtd",
+      "dtd": "NOARKSAK.DTD",
+      "metric_id": "case_file.count",
+      "sql_reference_id": "N4.03.01a",
+      "sql_reference_previous_id": "N4.03.01"
+    },
+    {
+      "entity_id": "case_classification",
+      "table": "KLASS",
+      "table_aliases": [
+        "KLASSERING"
+      ],
+      "source_id": "n4_dtd",
+      "dtd": "KLASS.DTD",
+      "metric_id": "case_classification.count"
+    },
+    {
+      "entity_id": "case_party",
+      "table": "SAKPART",
+      "table_aliases": [
+        "SAKSPART"
+      ],
+      "source_id": "n4_dtd",
+      "dtd": "SAKPART.DTD",
+      "metric_id": "case_party.count"
+    },
+    {
+      "entity_id": "journal_post",
+      "table": "JOURNPST",
+      "table_aliases": [
+        "JOURNPOST"
+      ],
+      "source_id": "n4_dtd",
+      "dtd": "JOURNPST.DTD",
+      "metric_id": "journal_post.count",
+      "sql_reference_id": "N4.04.01"
+    },
+    {
+      "entity_id": "correspondence_party",
+      "table": "AVSMOT",
+      "source_id": "n4_dtd",
+      "dtd": "AVSMOT.DTD",
+      "metric_id": "correspondence_party.count",
+      "sql_reference_id": "N4.05.01"
+    },
+    {
+      "entity_id": "document_link",
+      "table": "DOKLINK",
+      "source_id": "n4_dtd",
+      "dtd": "DOKLINK.DTD",
+      "metric_id": "document_link.count",
+      "sql_reference_id": "N4.06.01"
+    },
+    {
+      "entity_id": "document_description",
+      "table": "DOKBESK",
+      "table_aliases": [
+        "DOKBESKRIV"
+      ],
+      "source_id": "n4_dtd",
+      "dtd": "DOKBESK.DTD",
+      "metric_id": "document_description.count",
+      "sql_reference_id": "N4.06.11"
+    },
+    {
+      "entity_id": "document_representation",
+      "table": "DOKVERS",
+      "table_aliases": [
+        "DOKVERSJON"
+      ],
+      "source_id": "n4_dtd",
+      "dtd": "DOKVERS.DTD",
+      "metric_id": "document_representation.count",
+      "sql_reference_id": "N4.06.21",
+      "note": "Én DOKVERSJON-rad kan være en bestemt versjon OG variant; må ikke tolkes som unike dokumentversjoner"
+    },
+    {
+      "entity_id": "case_note",
+      "table": "MERKNAD",
+      "source_id": "n4_dtd",
+      "dtd": "MERKNAD.DTD",
+      "metric_id": "case_note.count",
+      "sql_reference_id": "N4.07.01"
+    }
+  ],
+  "relations": [
+    {
+      "id": "archive_part_archive",
+      "child": "archive_part",
+      "parent": "archive"
+    },
+    {
+      "id": "case_archive_part",
+      "child": "case_file",
+      "parent": "archive_part"
+    },
+    {
+      "id": "journal_post_case",
+      "child": "journal_post",
+      "parent": "case_file"
+    },
+    {
+      "id": "document_link_journal_post",
+      "child": "document_link",
+      "parent": "journal_post"
+    },
+    {
+      "id": "document_link_description",
+      "child": "document_link",
+      "parent": "document_description"
+    },
+    {
+      "id": "representation_description",
+      "child": "document_representation",
+      "parent": "document_description"
+    },
+    {
+      "id": "correspondence_party_journal_post",
+      "child": "correspondence_party",
+      "parent": "journal_post"
+    },
+    {
+      "id": "case_party_case",
+      "child": "case_party",
+      "parent": "case_file"
+    },
+    {
+      "id": "case_classification_case",
+      "child": "case_classification",
+      "parent": "case_file"
+    },
+    {
+      "id": "case_classification_value",
+      "child": "case_classification",
+      "parent": "classification_value"
+    },
+    {
+      "id": "classification_value_scheme",
+      "child": "classification_value",
+      "parent": "classification_scheme"
+    }
+  ]
+}

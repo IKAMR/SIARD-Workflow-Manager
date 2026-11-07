@@ -224,3 +224,10 @@ Kjør `test-innholdskontroll.bat` fra repositoryroten. BAT-filen kontrollerer at
 - Dokumentvisning og selve innholdsvurderingen av vedlegg og journalposter.
 
 **Neste naturlige steg:** Kjør a2 i katalogmodus på ett reelt ePhorte-SIARD. Se gjennom kartleggingsforslagene og bekreft de faktiske koblingene for saker og journalposter. Deretter kan vi utvikle presise fagkontroller og sammenligning med Noark 5-uttrekket.
+
+## A5 – ePhorte/Noark 4 (pilot)
+
+Se [INNHOLDSKONTROLL-A5-EPHORTE-NOARK4.md](INNHOLDSKONTROLL-A5-EPHORTE-NOARK4.md) for
+generisk arkivstruktur, opprettelse av **private og ubekreftede**
+ePhorte-adapterforslag, kontroll av deklarerte relasjoner og separat
+telling av dokumentrepresentasjoner og unike dokumentversjoner.
