@@ -9,7 +9,7 @@ from siard_workflow.core.context import WorkflowContext
 from siard_workflow.core.content_qa import run_content_qa
 from siard_workflow.core.content_qa.reporting import write_qa_reports
 from siard_workflow.core.content_qa.model_catalog import (
-    resolve_qa_model, inspect_resource_library, LEGACY,
+    resolve_qa_model, inspect_resource_library,
 )
 from siard_workflow.core.content_qa.semantic_results import build_noark4_metrics
 from siard_workflow.core.content_qa.ephorte_noark4 import write_private_proposal
@@ -38,8 +38,7 @@ class ContentQAOperation(BaseOperation):
     default_params = {
         'source_mode': 'Automatisk',
         'unpacked_dir': '',
-        'profile_file': '',
-        'domain_profile': LEGACY,
+        'domain_profile': 'saksarkiv',
         'adapter_file': '',
         'resources_root': '',
         'propose_ephorte_noark4_adapter': False,
@@ -109,14 +108,12 @@ class ContentQAOperation(BaseOperation):
 
         try:
             source, source_type, source_mode, source_origin = self._select_source(ctx)
-            profile_path = str(self.params.get('profile_file') or '').strip()
             resources_root = str(self.params.get('resources_root') or '').strip()
             library = inspect_resource_library(resources_root)
             profile, model_context = resolve_qa_model(
-                domain=str(self.params.get('domain_profile') or LEGACY),
+                domain=str(self.params.get('domain_profile') or 'saksarkiv'),
                 adapter_file=str(self.params.get('adapter_file') or ''),
                 resource_root=resources_root,
-                profile_file=profile_path,
             )
             make_proposal = bool(self.params.get('propose_ephorte_noark4_adapter', False))
             if make_proposal and (model_context.get('domain_id') != 'saksarkiv' or
@@ -224,11 +221,12 @@ class ContentQAOperation(BaseOperation):
             verdict = (f'QA {result["status"]}: {summary["tables_verified"]}/'
                        f'{summary["tables"]} tabeller, '
                        f'{summary["carriers_verified"]}/{summary["carriers"]} informasjonsbærere')
-            if result['status'] != 'GODKJENT':
-                # An incomplete check must not yield an overall 'GODKJENT'
-                # workflow verdict. halt_on_failure=False permits subsequent
-                # reporting to run and document the incomplete/failed checks.
+            if result['status'] == 'AVVIK':
                 return self._fail(verdict + '; se PDF/CSV', data)
+            if result['status'] == 'DELVIS_KONTROLLERT':
+                # Execution completed; QA approval is still explicitly withheld.
+                return self._ok(data, verdict +
+                                '; kontroll gjennomfort - IKKE FAGLIG GODKJENT; se PDF/CSV')
             return self._ok(data, verdict + '; se PDF/CSV')
         except Exception as exc:
             # Preserve failure information instead of showing a green step if

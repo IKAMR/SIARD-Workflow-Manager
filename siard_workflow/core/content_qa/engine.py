@@ -221,7 +221,7 @@ def run_content_qa(
                         'metadata_rows': t.declared_rows,
                         'actual_rows': None, 'status': 'IKKE_KONTROLLERT',
                         'pk_status': 'IKKE_KONTROLLERT' if t.primary_key else 'IKKE_DEFINERT',
-                        'pk_missing': None, 'pk_duplicates': None,
+                        'pk_missing': None, 'pk_duplicates': None, 'pk_empty': None,
                     }
                     catalog.append(t_report)
                     if not scan_rows:
@@ -229,6 +229,7 @@ def run_content_qa(
                     progress(f'Kontrollerer {t.ident}')
                     actual = 0
                     pk_null = 0
+                    pk_empty = 0
                     pk_dupe = 0
                     pk_ident = 'metadata::' + t.ident
                     pk_cols = list(t.primary_key)
@@ -247,6 +248,8 @@ def run_content_qa(
                                 if any(v is None for v in pk_values):
                                     pk_null += 1
                                 else:
+                                    if any(v == "" for v in pk_values):
+                                        pk_empty += 1
                                     cur = db.execute(
                                         'INSERT OR IGNORE INTO unique_keys(entity,key_hash) VALUES (?,?)',
                                         (pk_ident, _fingerprint(secret, pk_values)))
@@ -310,11 +313,15 @@ def run_content_qa(
                     t_report['actual_rows'] = actual
                     if can_check_pk:
                         t_report['pk_missing'] = pk_null
+                        t_report['pk_empty'] = pk_empty
                         t_report['pk_duplicates'] = pk_dupe
                         t_report['pk_status'] = 'AVVIK' if pk_null or pk_dupe else 'OK'
                         if pk_null:
                             finding('metadata_pk_null', t.ident, 'AVVIK', pk_null,
-                                    'Tom verdi i deklarert primærnøkkel', 'error')
+                                    'SQL NULL eller manglende XML-celle i deklarert primærnøkkel', 'error')
+                        if pk_empty:
+                            finding('metadata_pk_empty', t.ident, 'MERKNAD', pk_empty,
+                                    'Tom streng i deklarert primærnøkkel; ikke SQL NULL', 'warning')
                         if pk_dupe:
                             finding('metadata_pk_duplicate', t.ident, 'AVVIK', pk_dupe,
                                     'Duplikat av deklarert primærnøkkel', 'error')
@@ -451,6 +458,7 @@ def run_content_qa(
             'pk_verified': sum(1 for x in catalog if x['pk_status'] == 'OK'),
             'pk_unverified': sum(1 for x in catalog if x['pk_status'] == 'IKKE_KONTROLLERT'),
             'pk_with_errors': sum(1 for x in catalog if x['pk_status'] == 'AVVIK'),
+            'pk_empty_values': sum(x.get('pk_empty') or 0 for x in catalog),
             'metadata_rows_total': sum(x['metadata_rows'] or 0 for x in catalog),
             'actual_rows_total': sum(x['actual_rows'] or 0 for x in catalog),
             'carriers': len(carriers),

@@ -682,7 +682,7 @@ OP_DEFS = [
             "informasjonsbærere med JSON-kartlegging. Kontrollerer nøkler, "
             "relasjoner og status-/årsfordelinger der malsettet er kartlagt. "
             "Skrivebeskyttet: endrer aldri SIARD. Lager PDF, CSV og JSON. "
-            "Tom malfil bruker ePhorte-kartleggingsmalen (ikke automatisk godkjent). "
+            "Fagmodell velges eksplisitt; ingen mapping blir godkjent automatisk. "
             "Kan kontrollere utpakket SIARD før sammenpakking eller SIARD-fil "
             "etter sammenpakking. Kilden velges i innstillingene. "
             "A4/A5: generisk fagmodell, privat adapter og valgfritt ePhorte/Noark4-forslag; "
@@ -695,11 +695,11 @@ OP_DEFS = [
              "default": "Automatisk"},
             {"key": "unpacked_dir", "label": "Utpakket SIARD-mappe (valgfri)",
              "type": "folder", "default": ""},
-            {"key": "domain_profile", "label": "Fagmodell (tomt valg = gammel QA-mal)",
+            {"key": "domain_profile", "label": "Fagmodell",
              "type": "choice",
-             "choices": ["Eksisterende QA-mal", "saksarkiv", "barnevern", "skole",
+             "choices": ["saksarkiv", "barnevern", "skole",
                          "ppt", "helsetjeneste", "pleie_omsorg", "sosialtjeneste"],
-             "default": "Eksisterende QA-mal"},
+             "default": "saksarkiv"},
             {"key": "resources_root", "label": "Fagressursbibliotek (valgfri mappe)",
              "type": "folder", "default": ""},
             {"key": "adapter_file", "label": "Ekstern systemadapter (JSON, valgfri)",
@@ -707,8 +707,6 @@ OP_DEFS = [
             {"key": "propose_ephorte_noark4_adapter",
              "label": "Lag ePhorte/Noark 4-adapterforslag i fagressursbiblioteket (krever saksarkiv)",
              "type": "bool", "default": False},
-            {"key": "profile_file", "label": "Gammel QA-mal (JSON, kun legacy)",
-             "type": "file", "default": ""},
             {"key": "scan_rows", "label": "Tell og kontroller alle tabellrader",
              "type": "bool", "default": True},
             {"key": "check_metadata_pk", "label": "Kontroller primærnøkler fra SIARD-metadata",
@@ -961,6 +959,24 @@ OP_DEFS = [
 ]
 
 
+def _qa_dialog_geometry(screen_width: int, screen_height: int,
+                        n_params: int) -> tuple[int, int, int, int]:
+    """Storrelsen til QA-dialogen, med plass til vindusramme og knapper.
+
+    De aatte vanlige QA-valgene skal ikke fylle nesten hele skjermen.
+    Paa mindre skjermer krymper feltomraadet og bruker eksisterende rulling.
+    """
+    width = min(1160, max(540, screen_width - 80))
+    width = min(width, max(360, screen_width - 40))
+    estimated_height = 195 + n_params * 52
+    height = min(640, max(450, estimated_height),
+                 max(350, screen_height - 110))
+    # Sentrer inklusive ca. 32 piksler for tittellinjen.
+    x = max(0, (screen_width - width) // 2)
+    y = max(0, (screen_height - height - 32) // 2)
+    return width, height, x, y
+
+
 class ParamDialog(ctk.CTkToplevel):
     def __init__(self, parent, op_def, on_confirm, on_saved=None):
         super().__init__(parent)
@@ -972,18 +988,26 @@ class ParamDialog(ctk.CTkToplevel):
         self._on_saved   = on_saved   # kalles med (operation_id, params, settings_path)
         self._vars       = {}
         self._validators: list = []
-        self._build()
+        self._qa_dialog = op_def.get("cls") is ContentQAOperation
         n_params = len(op_def.get("params", []))
-        row_h    = 52
-        header_h = 120
-        footer_h = 70
-        has_wide = any(p.get("type") in ("hw_int", "autocomplete", "file", "folder") or p.get("key") == "temp_dir"
-                       for p in op_def.get("params", []))
-        width    = 640 if has_wide else 520
-        height   = min(header_h + n_params * row_h + footer_h, 720)
-        height   = max(height, 300)
-        self.geometry(f"{width}x{height}")
-        self.minsize(width, 300)
+        if self._qa_dialog:
+            width, height, x, y = _qa_dialog_geometry(
+                self.winfo_screenwidth(), self.winfo_screenheight(), n_params)
+            self._qa_width = width
+        self._build()
+        if self._qa_dialog:
+            # Eksplisitt plassering hindrer at knappene havner under skjermkanten.
+            self.geometry(f"{width}x{height}+{x}+{y}")
+            self.minsize(min(width, 720), 300)
+        else:
+            row_h, header_h, footer_h = 52, 120, 70
+            has_wide = any(
+                p.get("type") in ("hw_int", "autocomplete", "file", "folder")
+                or p.get("key") == "temp_dir" for p in op_def.get("params", []))
+            width = 640 if has_wide else 520
+            height = max(300, min(header_h + n_params * row_h + footer_h, 720))
+            self.geometry(f"{width}x{height}")
+            self.minsize(width, 300)
         self.resizable(True, True)
 
     def _build(self):
@@ -995,7 +1019,10 @@ class ParamDialog(ctk.CTkToplevel):
                      text_color=COLORS["accent"]).grid(row=0, column=0, padx=20, pady=(18,4), sticky="w")
         ctk.CTkLabel(self, text=self._op_def["desc"],
                      font=ctk.CTkFont(family=FONTS["mono"], size=11),
-                     text_color=COLORS["muted"], wraplength=380).grid(row=1, column=0, padx=20, pady=(0,14), sticky="w")
+                     text_color=COLORS["muted"],
+                     wraplength=(min(900, max(450, self._qa_width - 80))
+                                 if self._qa_dialog else 380),
+                     justify="left").grid(row=1, column=0, padx=20, pady=(0,14), sticky="w")
         params = self._op_def.get("params", [])
         if not params:
             ctk.CTkLabel(self, text="Ingen parametere.",
@@ -1010,7 +1037,10 @@ class ParamDialog(ctk.CTkToplevel):
             for i, p in enumerate(params):
                 ctk.CTkLabel(frm, text=p["label"],
                              font=ctk.CTkFont(family=FONTS["mono"], size=11),
-                             text_color=COLORS["text"]).grid(row=i, column=0, padx=12, pady=8, sticky="w")
+                             text_color=COLORS["text"],
+                             wraplength=(min(400, max(220, (self._qa_width - 300)//2))
+                                         if self._qa_dialog else 0),
+                             justify="left").grid(row=i, column=0, padx=12, pady=8, sticky="w")
                 if p["type"] == "bool":
                     var = ctk.BooleanVar(value=p["default"])
                     ctk.CTkSwitch(frm, text="", variable=var,

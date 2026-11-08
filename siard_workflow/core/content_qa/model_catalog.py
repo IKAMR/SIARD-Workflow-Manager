@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 import re
 
-from .profile import ProfileError, validate_profile, load_profile
+from .profile import ProfileError, validate_profile
 
 
 class ModelError(ValueError):
@@ -19,7 +19,6 @@ class ModelError(ValueError):
 
 
 MODEL_ROOT = Path(__file__).resolve().parents[2] / 'models'
-LEGACY = 'Eksisterende QA-mal'
 _ID = re.compile(r'^[a-z][a-z0-9_]*$')
 
 
@@ -240,37 +239,26 @@ def load_adapter(path: str | Path, *, resource_root: str | Path | None = None) -
     return adapter, _digest(adapter)
 
 
-def resolve_qa_model(*, domain: str = LEGACY, adapter_file: str = '',
-                     resource_root: str = '', profile_file: str = '',
+def resolve_qa_model(*, domain: str | None = None, adapter_file: str = '',
+                     resource_root: str = '',
                      model_root: str | Path | None = None) -> tuple[dict, dict]:
-    """Compile a generic domain + approved external bindings to QA v1.
+    """Build a generic domain profile, using only approved adapter bindings.
 
-    With all new settings omitted, EXACTLY the a1-a3 profile loader is used.
-    Unapproved bindings are never silently activated. No private paths or raw
-    adapter definitions are written into result provenance.
+    Unselected domain defaults to saksarkiv, unless an explicit adapter
+    selects its own domain. No automatic system-specific approval occurs.
     """
-    domain = str(domain or LEGACY).strip()
     adapter_file = str(adapter_file or '').strip()
     resource_root = str(resource_root or '').strip()
-    profile_file = str(profile_file or '').strip()
-    if profile_file and (adapter_file or domain != LEGACY):
-        raise ModelError('Velg enten gammel QA-mal eller fagmodell/adapter, ikke begge')
-    if not adapter_file and domain == LEGACY:
-        profile = load_profile(profile_file)
-        return profile, {'mode': 'legacy', 'domain_id': None, 'module_ids': [],
-                         'model_sha256': None, 'adapter_id': None,
-                         'adapter_sha256': None, 'bindings_applied': 0,
-                         'bindings_pending': 0}
-    if profile_file:
-        raise ModelError('QA-mal kan ikke kombineres med fagmodell')
     adapter = None
     digest = None
     if adapter_file:
         adapter, digest = load_adapter(adapter_file, resource_root=resource_root)
-        if domain == LEGACY:
-            domain = adapter['domain_id']
-        elif domain != adapter['domain_id']:
-            raise ModelError('Valgt fagmodell og adapterens domain_id er ulike')
+    selected = str(domain or '').strip()
+    if not selected:
+        selected = adapter['domain_id'] if adapter else 'saksarkiv'
+    if adapter and selected != adapter['domain_id']:
+        raise ModelError('Valgt fagmodell og adapterens domain_id er ulike')
+    domain = selected
     model = load_domain_model(domain, model_root)
     carriers = []
     by_id = {}

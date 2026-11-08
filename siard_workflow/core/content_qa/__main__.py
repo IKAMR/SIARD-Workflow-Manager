@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 
 from .engine import run_content_qa
-from .model_catalog import (LEGACY, ModelError, list_domain_models,
+from .model_catalog import (ModelError, list_domain_models,
                             resolve_qa_model, inspect_resource_library)
 from .reporting import write_qa_reports
 from .semantic_results import build_noark4_metrics
@@ -15,8 +15,7 @@ from .semantic_results import build_noark4_metrics
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description='Skrivebeskyttet SIARD innholdskontroll')
     parser.add_argument('siard', nargs='?', help='SIARD ZIP-fil eller utpakket SIARD-mappe')
-    parser.add_argument('--profile', default='', help='Gammel QA-mal i JSON (legacy)')
-    parser.add_argument('--domain', default=LEGACY,
+    parser.add_argument('--domain', default=None,
                         help='Generisk fagmodell, f.eks. saksarkiv, barnevern, skole')
     parser.add_argument('--adapter', default='',
                         help='Valgfri ekstern, manuelt gjennomgatt systemadapter i JSON')
@@ -42,7 +41,7 @@ def main(argv=None) -> int:
         library = inspect_resource_library(args.resources_root)
         profile, model_context = resolve_qa_model(
             domain=args.domain, adapter_file=args.adapter,
-            resource_root=args.resources_root, profile_file=args.profile,
+            resource_root=args.resources_root,
         )
         source = Path(args.siard)
         result = run_content_qa(source, profile, scan_rows=not args.metadata_only,

@@ -254,8 +254,14 @@ class SiardSource:
                         if i < len(table.columns):
                             # Never load external LOB contents; attributes are not
                             # scalar values and must not become bogus keys.
+                            # A6: <cN/> is an empty SQL string, not NULL.
+                            # Only an omitted cell or xsi:nil=true is NULL.
+                            nil = col_node.get(
+                                "{http://www.w3.org/2001/XMLSchema-instance}nil",
+                                "").strip().lower()
                             values[table.columns[i].name] = (
-                                col_node.text if col_node.text is not None else None)
+                                None if nil in ("true", "1") else
+                                col_node.text if col_node.text is not None else "")
                 yield row_n, values
                 if root is not None:
                     root.clear()

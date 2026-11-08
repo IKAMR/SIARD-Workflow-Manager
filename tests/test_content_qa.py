@@ -87,7 +87,10 @@ def synthetic_siard(tmp: Path, *, orphan=False, duplicate=False, nullkey=False,
             row = ET.SubElement(t, f'{{{TABLE_NS}}}row')
             for i, v in enumerate(values, 1):
                 c = ET.SubElement(row, f'{{{TABLE_NS}}}c{i}')
-                if v is not None:
+                if v is None:
+                    # Explicit SQL NULL; an empty element means an empty string.
+                    c.set('{http://www.w3.org/2001/XMLSchema-instance}nil', 'true')
+                else:
                     c.text = v
                 if nested_row and folder == 'table0' and i == 3:
                     ET.SubElement(c, f'{{{TABLE_NS}}}row').text = 'nested XML, not a real table row'

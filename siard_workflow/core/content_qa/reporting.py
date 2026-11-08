@@ -74,7 +74,7 @@ def write_qa_reports(result: dict, output_dir: str | Path, stem: str) -> dict[st
     paths['json'].write_text(json.dumps(result, ensure_ascii=False,
                                         indent=2) + '\n', encoding='utf-8')
     _write_csv(paths['tables_csv'],
-               ['schema', 'table', 'metadata_rows', 'actual_rows', 'status', 'primary_key', 'pk_status', 'pk_missing', 'pk_duplicates', 'candidate_keys', 'foreign_key_count'],
+               ['schema', 'table', 'metadata_rows', 'actual_rows', 'status', 'primary_key', 'pk_status', 'pk_missing', 'pk_empty', 'pk_duplicates', 'candidate_keys', 'foreign_key_count'],
                [{**x, 'primary_key': ', '.join(x.get('primary_key', []))}
                 for x in result['catalog']])
     _write_csv(paths['carriers_csv'],

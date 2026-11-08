@@ -19,7 +19,6 @@ for %%F in (
     "siard_workflow\operations\__init__.py"
     "siard_workflow\operations\report_style.py"
     "siard_workflow\operations\content_qa_operation.py"
-    "siard_workflow\rules\content_qa\ephorte_template.json"
     "siard_workflow\core\content_qa\__init__.py"
     "siard_workflow\core\content_qa\__main__.py"
     "siard_workflow\core\content_qa\source.py"
@@ -42,6 +41,7 @@ for %%F in (
     "tests\test_content_qa_operation.py"
     "tests\test_content_qa_models.py"
     "tests\test_content_qa_ephorte_a5.py"
+    "tests\test_content_qa_a6.py"
 ) do (
     if not exist "%%~F" (
         echo [FEIL] Mangler %%~F i %CD%
@@ -89,7 +89,7 @@ if errorlevel 1 (
 
 echo.
 echo [4/4] Kontrollerer syntaks i leverte filer...
-python -X utf8 -m py_compile "version.py" "gui\operations_panel.py" "siard_workflow\core\workflow_io.py" "siard_workflow\operations\content_qa_operation.py" "siard_workflow\operations\__init__.py" "siard_workflow\core\content_qa\__init__.py" "siard_workflow\core\content_qa\__main__.py" "siard_workflow\core\content_qa\source.py" "siard_workflow\core\content_qa\profile.py" "siard_workflow\core\content_qa\model_catalog.py" "siard_workflow\core\content_qa\ephorte_noark4.py" "siard_workflow\core\content_qa\semantic_results.py" "siard_workflow\core\content_qa\engine.py" "siard_workflow\core\content_qa\discovery.py" "siard_workflow\core\content_qa\reporting.py" "tests\test_content_qa.py" "tests\test_content_qa_discovery.py" "tests\test_content_qa_operation.py" "tests\test_content_qa_models.py" "tests\test_content_qa_ephorte_a5.py"
+python -X utf8 -m py_compile "version.py" "gui\operations_panel.py" "siard_workflow\core\workflow_io.py" "siard_workflow\operations\content_qa_operation.py" "siard_workflow\operations\__init__.py" "siard_workflow\core\content_qa\__init__.py" "siard_workflow\core\content_qa\__main__.py" "siard_workflow\core\content_qa\source.py" "siard_workflow\core\content_qa\profile.py" "siard_workflow\core\content_qa\model_catalog.py" "siard_workflow\core\content_qa\ephorte_noark4.py" "siard_workflow\core\content_qa\semantic_results.py" "siard_workflow\core\content_qa\engine.py" "siard_workflow\core\content_qa\discovery.py" "siard_workflow\core\content_qa\reporting.py" "tests\test_content_qa.py" "tests\test_content_qa_discovery.py" "tests\test_content_qa_operation.py" "tests\test_content_qa_models.py" "tests\test_content_qa_ephorte_a5.py" "tests\test_content_qa_a6.py"
 if errorlevel 1 (
     echo [FEIL] Kontrollen feilet.
     set "rc=1"

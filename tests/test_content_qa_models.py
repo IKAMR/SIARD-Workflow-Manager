@@ -10,11 +10,11 @@ import unittest
 
 from siard_workflow.core.content_qa.engine import run_content_qa
 from siard_workflow.core.content_qa.model_catalog import (
-    LEGACY, MODEL_ROOT, ModelError, list_domain_models, load_domain_model,
+    MODEL_ROOT, ModelError, list_domain_models, load_domain_model,
     load_adapter, inspect_resource_library, resolve_qa_model,
 )
 from siard_workflow.core.content_qa.__main__ import main as cli_main
-from test_content_qa import synthetic_siard, example_profile
+from test_content_qa import synthetic_siard
 
 
 SYNTHETIC_ADAPTER = {
@@ -89,17 +89,12 @@ class ModelCatalogTests(unittest.TestCase):
             self.assertIn(common, b)
             self.assertIn(common, s)
 
-    def test_legacy_is_exact_backward_compatible(self):
+    def test_default_is_generic_domain_not_old_template(self):
         profile, provenance = resolve_qa_model()
-        self.assertIn('ephorte', profile['id'])
-        self.assertEqual(provenance['mode'], 'legacy')
-        self.assertIsNone(provenance['domain_id'])
+        self.assertEqual(profile['id'], 'domain_saksarkiv')
+        self.assertEqual(provenance['mode'], 'domain')
+        self.assertEqual(provenance['domain_id'], 'saksarkiv')
         self.assertTrue(all(c.get('source') is None for c in profile['carriers']))
-        path = self.tmp / 'legacy.json'
-        path.write_text(json.dumps(example_profile()), encoding='utf-8')
-        manual, context = resolve_qa_model(profile_file=str(path))
-        self.assertEqual(manual, example_profile())
-        self.assertEqual(context['mode'], 'legacy')
 
     def test_domain_only_is_unmapped_and_never_claims_approval(self):
         profile, context = resolve_qa_model(domain='saksarkiv')
@@ -158,14 +153,12 @@ class ModelCatalogTests(unittest.TestCase):
         with self.assertRaises(ModelError):
             load_domain_model('../saksarkiv')
 
-    def test_wrong_domain_and_custom_legacy_are_rejected(self):
+    def test_wrong_domain_and_removed_profile_option_rejected(self):
         file = self._adapter()
         with self.assertRaises(ModelError):
             resolve_qa_model(domain='barnevern', adapter_file=str(file))
-        with self.assertRaises(ModelError):
-            resolve_qa_model(profile_file='x.json', adapter_file=str(file))
-        with self.assertRaises(ModelError):
-            resolve_qa_model(profile_file='x.json', domain='skole')
+        with self.assertRaises(TypeError):
+            resolve_qa_model(profile_file='old.json')
 
     def test_unknown_module_does_not_silently_disappear(self):
         other = self.tmp / 'models'
@@ -234,7 +227,7 @@ class ModelCatalogTests(unittest.TestCase):
         ctx = WorkflowContext(siard_path=source)
         ctx.metadata['log_dir'] = str(self.tmp / 'logs')
         result = ContentQAOperation(domain_profile='saksarkiv', scan_rows=False).run(ctx)
-        self.assertFalse(result.success)
+        self.assertTrue(result.success)
         self.assertEqual(result.data['qa_status'], 'DELVIS_KONTROLLERT')
         self.assertEqual(result.data['qa_domain_id'], 'saksarkiv')
         self.assertEqual(result.data['qa_bindings_approved'], 0)
@@ -255,7 +248,7 @@ class ModelCatalogTests(unittest.TestCase):
         op = ContentQAOperation(adapter_file='adapters/synthetic.json',
                                 resources_root=str(self.tmp))
         result = op.run(ctx)
-        self.assertFalse(result.success)  # Still 22 unmapped concepts!
+        self.assertTrue(result.success)  # QA remains partially checked.
         self.assertEqual(result.data['qa_status'], 'DELVIS_KONTROLLERT')
         self.assertEqual(result.data['qa_bindings_approved'], 2)
         self.assertEqual(result.data['qa_bindings_pending'], 2)

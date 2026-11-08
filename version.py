@@ -5,5 +5,5 @@ for visning i programtittelen.
 """
 
 VERSION = "1.4.23"
-DEVELOPMENT_SUFFIX = "ikamr-04-a5"
+DEVELOPMENT_SUFFIX = "ikamr-04-a6"
 DISPLAY_VERSION = f"{VERSION}-{DEVELOPMENT_SUFFIX}" if DEVELOPMENT_SUFFIX else VERSION

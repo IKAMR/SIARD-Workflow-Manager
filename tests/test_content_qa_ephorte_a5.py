@@ -87,7 +87,11 @@ def document_representation_fixture(root: Path, *, null_version=False) -> Path:
         row=ET.SubElement(data,'{%s}row' % TABLE_NS)
         for i,value in enumerate(tup,1):
             child=ET.SubElement(row,'{%s}c%d' % (TABLE_NS,i))
-            child.text=value
+            if value is None:
+                # Explicit SQL NULL; an empty element means an empty string.
+                child.set('{http://www.w3.org/2001/XMLSchema-instance}nil', 'true')
+            else:
+                child.text=value
     target=root/'synthetic.siard'
     with zipfile.ZipFile(target,'w',zipfile.ZIP_DEFLATED) as z:
         z.writestr('header/metadata.xml',ET.tostring(md,encoding='utf-8',xml_declaration=True))
@@ -244,7 +248,7 @@ class EphorteA5Tests(unittest.TestCase):
         op=ContentQAOperation(domain_profile='saksarkiv', resources_root=str(resources),
                               propose_ephorte_noark4_adapter=True,scan_rows=False)
         operation_result=op.run(ctx)
-        self.assertFalse(operation_result.success)  # No approved mappings yet.
+        self.assertTrue(operation_result.success)  # Execution finished; no QA approval.
         self.assertEqual(operation_result.data['qa_status'],'DELVIS_KONTROLLERT')
         proposal=Path(operation_result.data['qa_adapter_proposal_file'])
         self.assertTrue(proposal.is_file())
