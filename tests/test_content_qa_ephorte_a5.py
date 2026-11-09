@@ -237,41 +237,36 @@ class EphorteA5Tests(unittest.TestCase):
         self.assertEqual(c2['status'],'IKKE_KONTROLLERT')
         self.assertEqual(c2['distinct_counts'],{})
 
-    def test_operation_can_write_private_proposal_without_auto_approval(self):
+    def test_a7_generic_qa_never_generates_ephorte_adapter(self):
+        # Old project checkpoints may still include the a6-only setting. It is
+        # ignored explicitly; existing private adapters remain untouched.
         from siard_workflow.core.context import WorkflowContext
         from siard_workflow.operations.content_qa_operation import ContentQAOperation
-        src=document_representation_fixture(self.tmp)
-        resources=self.tmp/'external_library'
+        src = document_representation_fixture(self.tmp)
+        resources = self.tmp / 'external_library'
         resources.mkdir()
-        ctx=WorkflowContext(siard_path=src)
-        ctx.metadata['log_dir']=str(self.tmp/'operation_logs')
-        op=ContentQAOperation(domain_profile='saksarkiv', resources_root=str(resources),
-                              propose_ephorte_noark4_adapter=True,scan_rows=False)
-        operation_result=op.run(ctx)
-        self.assertTrue(operation_result.success)  # Execution finished; no QA approval.
-        self.assertEqual(operation_result.data['qa_status'],'DELVIS_KONTROLLERT')
-        proposal=Path(operation_result.data['qa_adapter_proposal_file'])
-        self.assertTrue(proposal.is_file())
-        # Windows TEMP can be reached through junctions/aliases. The writer
-        # deliberately returns a canonical path for security; compare both
-        # paths canonically rather than checking their textual spelling.
-        self.assertTrue(
-            proposal.resolve().is_relative_to(resources.resolve()),
-            f'Adapterforslaget ble lagret utenfor fagressursmappen: '
-            f'{proposal.resolve()} (forventet under {resources.resolve()})',
-        )
-        self.assertFalse(any(b['review_status']=='approved' for b in load_adapter(proposal)[0]['bindings']))
-        self.assertIsNone(operation_result.data['qa_semantic_metrics_csv'])
+        ctx = WorkflowContext(siard_path=src)
+        ctx.metadata['log_dir'] = str(self.tmp / 'operation_logs')
+        op = ContentQAOperation(domain_profile='saksarkiv',
+                                resources_root=str(resources),
+                                propose_ephorte_noark4_adapter=True,
+                                scan_rows=False)
+        result = op.run(ctx)
+        self.assertTrue(result.success, result.message)
+        self.assertEqual(result.data['qa_status'], 'DELVIS_KONTROLLERT')
+        self.assertNotIn('qa_adapter_proposal_file', result.data)
+        self.assertEqual(list(resources.rglob('*.json')), [])
+        self.assertIsNone(result.data['qa_semantic_metrics_csv'])
 
-    def test_operation_rejects_proposal_without_resource_library(self):
+    def test_a7_old_proposal_setting_needs_no_resource_library(self):
         from siard_workflow.core.context import WorkflowContext
         from siard_workflow.operations.content_qa_operation import ContentQAOperation
-        source=document_representation_fixture(self.tmp)
-        out=ContentQAOperation(domain_profile='saksarkiv',
-                               propose_ephorte_noark4_adapter=True,
-                               scan_rows=False).run(WorkflowContext(siard_path=source))
-        self.assertFalse(out.success)
-        self.assertIn('fagressursmappe',out.message)
+        source = document_representation_fixture(self.tmp)
+        out = ContentQAOperation(domain_profile='saksarkiv',
+                                 propose_ephorte_noark4_adapter=True,
+                                 scan_rows=False).run(WorkflowContext(siard_path=source))
+        self.assertTrue(out.success, out.message)
+        self.assertEqual(out.data['qa_status'], 'DELVIS_KONTROLLERT')
 
     def test_standalone_only_when_noark4_is_selected(self):
         self.assertIsNone(build_noark4_metrics({'carriers':[]},{'domain_id':'barnevern','standard_id':'noark4'}))

@@ -685,8 +685,8 @@ OP_DEFS = [
             "Fagmodell velges eksplisitt; ingen mapping blir godkjent automatisk. "
             "Kan kontrollere utpakket SIARD før sammenpakking eller SIARD-fil "
             "etter sammenpakking. Kilden velges i innstillingene. "
-            "A4/A5: generisk fagmodell, privat adapter og valgfritt ePhorte/Noark4-forslag; "
-            "ubekreftede forslag brukes ikke i kontrollen."
+            "A7: Generisk fagmodell og valgfri privat adapter. "
+            "Ubekreftede kartleggingsforslag brukes aldri i kontrollen."
         ),
         "status": ContentQAOperation.status,
         "params": [
@@ -704,9 +704,6 @@ OP_DEFS = [
              "type": "folder", "default": ""},
             {"key": "adapter_file", "label": "Ekstern systemadapter (JSON, valgfri)",
              "type": "file", "default": ""},
-            {"key": "propose_ephorte_noark4_adapter",
-             "label": "Lag ePhorte/Noark 4-adapterforslag i fagressursbiblioteket (krever saksarkiv)",
-             "type": "bool", "default": False},
             {"key": "scan_rows", "label": "Tell og kontroller alle tabellrader",
              "type": "bool", "default": True},
             {"key": "check_metadata_pk", "label": "Kontroller primærnøkler fra SIARD-metadata",
@@ -1270,7 +1267,18 @@ class ParamDialog(ctk.CTkToplevel):
                     self._on_saved(op.operation_id, kwargs, None,
                                    error=str(e))
 
+        # Parameterendringer opphever den synlige ferdig-haken. Selve
+        # gjenkjøringskontrollen ligger i ProjectFile.is_completed().
+        host = self.master
+        old_ops = list(host.get_operations()) if hasattr(host, 'get_operations') else []
+        old_state = [(id(item), dict(item.params)) for item in old_ops]
         self._on_confirm(op)
+        if old_state and hasattr(host, 'set_step_status'):
+            for index, (identity, old_params) in enumerate(old_state):
+                current = list(host.get_operations())
+                if index < len(current) and (id(current[index]) != identity
+                        or current[index].params != old_params):
+                    host.set_step_status(index, 'pending')
         self.destroy()
 
 

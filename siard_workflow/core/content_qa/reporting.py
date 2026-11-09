@@ -71,6 +71,8 @@ def write_qa_reports(result: dict, output_dir: str | Path, stem: str) -> dict[st
         paths = files_for(candidate)
         if result.get('semantic_results') is not None:
             paths['semantic_metrics_csv'] = Path(f'{candidate}_faglige_metrikker.csv')
+    # Technical execution and archival QA are separate assessments.
+    result.setdefault('execution_status', 'KONTROLL_FULLFORT')
     paths['json'].write_text(json.dumps(result, ensure_ascii=False,
                                         indent=2) + '\n', encoding='utf-8')
     _write_csv(paths['tables_csv'],
@@ -153,7 +155,7 @@ def _pdf_qa(result: dict, output: Path) -> None:
                                        else 'SIARD-fil')),
                       ('Kildevalg', E(result.get('source_selection', 'Direkte angitt'))),
                       ('Kilde fra', E(result.get('source_origin', 'Angitt ved oppstart'))),
-                      ('QA-mal', E(result['profile_label'])),
+                      ('Fagmodell / QA-profil', E(result['profile_label'])),
                       ('Mal-ID', E(result['profile_id'])),
                       ('Kjørt', E(result['created_at'].replace('T', ' ')[:19])),
                       ('Modus', 'Skrivebeskyttet, full radskann' if result['scan_rows']
@@ -166,7 +168,7 @@ def _pdf_qa(result: dict, output: Path) -> None:
             ('Moduler', E(', '.join(model.get('module_ids') or []))),
             ('Adapter', E(model.get('adapter_id') or 'Ingen valgt')),
             ('Godkjente bindinger', str(model.get('bindings_applied', 0))),
-            ('Ubekreftede forslag', str(model.get('bindings_pending', 0))),
+            ('Ubekreftede adapterbindinger', str(model.get('bindings_pending', 0))),
             ('Modell SHA-256', E((model.get('model_sha256') or '')[:16]) + '...'),
             ('Adapter SHA-256', E((model.get('adapter_sha256') or '')[:16]) + '...'
              if model.get('adapter_sha256') else 'Ingen'),
@@ -175,16 +177,24 @@ def _pdf_qa(result: dict, output: Path) -> None:
             'Generiske fagbegreper er arbeidsmodeller, ikke en standardgodkjenning. '
             'Bare eksplisitt godkjente adapterbindinger er aktivert.', 'warn'))
     story += tk.section('Samlet vurdering')
-    story.append(tk.status_box(
-        verdict,
-        f"{s['tables_verified']}/{s['tables']} tabeller. "
-        f"{s['carriers_verified']}/{s['carriers']} fagobjekter.", kind))
+    story.append(tk.kv_table([
+        ('Teknisk kjøring', 'KONTROLL FULLFØRT'),
+        ('QA-vurdering', verdict),
+    ]))
+    # The status_box uses single-line Table cells; keep its detail short.
+    detail = (f"Katalog: {s['tables']} tabeller funnet; 0 rader skannet"
+              if not result['scan_rows'] else
+              f"Radkontroll: {s['tables_verified']}/{s['tables']} tabeller")
+    story.append(tk.status_box(verdict, detail, kind))
+    story.append(tk.note(
+        f"Faglig verifisering: {s['carriers_verified']}/{s['carriers']} "
+        "informasjonsbærere. Kartlegging og kontroll er separate steg.", 'info'))
     story.append(tk.spacer(0.25))
     story.append(tk.kv_table([
         ('Tabeller i SIARD', fmt_int(s['tables'])),
         ('Metadata-rader (sum)', fmt_int(s['metadata_rows_total'])),
         ('Leste datarader (sum)', fmt_int(s['actual_rows_total']) if result['scan_rows'] else 'Ikke lest'),
-        ('Verifiserte tabeller', fmt_int(s['tables_verified'])),
+        ('Tabeller med kontrollert radantall', fmt_int(s['tables_verified'])),
         ('Tabeller med avvik', fmt_int(s['tables_with_errors'])),
         ('Deklarerte primærnøkler', fmt_int(s['pk_defined'])),
         ('Primærnøkler kontrollert', fmt_int(s['pk_verified'])),
@@ -197,9 +207,9 @@ def _pdf_qa(result: dict, output: Path) -> None:
         ('Navnebaserte relasjonsforslag', fmt_int(s.get('discovery_relation_proposals', 0))),
     ]))
     if status == 'DELVIS_KONTROLLERT':
-        story.append(tk.note('Dette er IKKE en faglig godkjenning: tabeller, '
-                             'informasjonsbærere eller relasjoner er ikke kartlagt/kontrollert.',
-                             'warn'))
+        story.append(tk.note('Dette er IKKE en faglig godkjenning. '
+                             'Kataloglesing, radkontroll og faglig kartlegging er ulike '
+                             'kontrollnivåer; se status for hvert nivå ovenfor.', 'warn'))
     if status == 'AVVIK':
         story.append(tk.note('Avvik er dokumentert i avviks-CSV. '
                              'En fullfort arbeidsflyt betyr ikke at innholdet er godkjent.', 'fail'))
