@@ -13,7 +13,8 @@
     "document",
     "file_reference",
     "access_control",
-    "service"
+    "service",
+    "social_register"
   ],
-  "description": "Konseptuell fagmodell under utvikling. Fysisk systemkartlegging krever ekstern, godkjent adapter."
+  "description": "Generisk sosialregister-/sosialtjenestemodell. Fagbegrepene er leverandøruavhengige; klienter må skilles fra systembrukere og vedtak fra tiltak. Fysisk mapping krever separat gjennomgått systemadapter. CLOB/NCLOB-tekst er dataverdier, ikke automatisk dokumenter."
 }

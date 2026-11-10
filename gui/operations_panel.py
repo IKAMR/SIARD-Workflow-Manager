@@ -685,7 +685,8 @@ OP_DEFS = [
             "Fagmodell velges eksplisitt; ingen mapping blir godkjent automatisk. "
             "Kan kontrollere utpakket SIARD før sammenpakking eller SIARD-fil "
             "etter sammenpakking. Kilden velges i innstillingene. "
-            "A7: Generisk fagmodell og valgfri privat adapter. "
+            "A8: Leverandøruavhengige fagmodeller og valgfrie eksterne adaptere. "
+            "Valgt adapter får separat metadatakontroll; forslag aktiveres ikke. "
             "Ubekreftede kartleggingsforslag brukes aldri i kontrollen."
         ),
         "status": ContentQAOperation.status,
@@ -700,8 +701,8 @@ OP_DEFS = [
              "choices": ["saksarkiv", "barnevern", "skole",
                          "ppt", "helsetjeneste", "pleie_omsorg", "sosialtjeneste"],
              "default": "saksarkiv"},
-            {"key": "resources_root", "label": "Fagressursbibliotek (valgfri mappe)",
-             "type": "folder", "default": ""},
+            # Separate local directories are configured with the
+            # "Ressursmapper..." button below, not within each project.
             {"key": "adapter_file", "label": "Ekstern systemadapter (JSON, valgfri)",
              "type": "file", "default": ""},
             {"key": "scan_rows", "label": "Tell og kontroller alle tabellrader",
@@ -974,6 +975,29 @@ def _qa_dialog_geometry(screen_width: int, screen_height: int,
     return width, height, x, y
 
 
+def _qa_project_location_info(widget) -> str:
+    """Show the actual selected project path, or the automatic fallback.
+
+    The project checkpoint and QA reports do not share a location setting.
+    This is intentionally read-only: never silently move project files.
+    """
+    current = widget
+    for _ in range(12):
+        if current is None:
+            break
+        if hasattr(current, '_project_path'):
+            selected = getattr(current, '_project_path', None)
+            if selected:
+                return 'Aktiv prosjektfil: ' + str(Path(selected))
+            source = getattr(current, 'siard_path', None)
+            if source:
+                return ('Ingen prosjektfil valgt; automatisk prosjekt opprettes ved SIARD-filen: '
+                        + str(Path(source).with_suffix('.siardwf')))
+            return 'Ingen aktiv prosjektfil eller SIARD-kilde'
+        current = getattr(current, 'master', None)
+    return 'Prosjektsti: ikke tilgjengelig her'
+
+
 class ParamDialog(ctk.CTkToplevel):
     def __init__(self, parent, op_def, on_confirm, on_saved=None):
         super().__init__(parent)
@@ -1014,7 +1038,10 @@ class ParamDialog(ctk.CTkToplevel):
         ctk.CTkLabel(self, text=self._op_def["label"],
                      font=ctk.CTkFont(family=FONTS["mono"], size=14, weight="bold"),
                      text_color=COLORS["accent"]).grid(row=0, column=0, padx=20, pady=(18,4), sticky="w")
-        ctk.CTkLabel(self, text=self._op_def["desc"],
+        desc_text = self._op_def["desc"]
+        if self._qa_dialog:
+            desc_text += '\n\n' + _qa_project_location_info(self.master)
+        ctk.CTkLabel(self, text=desc_text,
                      font=ctk.CTkFont(family=FONTS["mono"], size=11),
                      text_color=COLORS["muted"],
                      wraplength=(min(900, max(450, self._qa_width - 80))
@@ -1046,11 +1073,25 @@ class ParamDialog(ctk.CTkToplevel):
                     self._vars[p["key"]] = (var, "bool")
                     continue
                 elif p["type"] == "choice":
-                    var = ctk.StringVar(value=str(p["default"]))
+                    choice_labels = None
+                    selected = str(p["default"])
+                    choices = p.get("choices", [p["default"]])
+                    if self._qa_dialog and p["key"] == "domain_profile":
+                        from siard_workflow.core.content_qa.model_catalog import list_domain_models
+                        domains = list_domain_models()
+                        choice_labels = {
+                            f'{item["category_code"]} {item["label"]}': item["id"]
+                            for item in domains
+                        }
+                        selected = next((label for label, item_id in choice_labels.items()
+                                         if item_id == selected), selected)
+                        choices = list(choice_labels)
+                        self._qa_domain_choice_ids = choice_labels
+                    var = ctk.StringVar(value=selected)
                     ctk.CTkOptionMenu(
                         frm,
                         variable=var,
-                        values=p.get("choices", [p["default"]]),
+                        values=choices,
                         fg_color=COLORS["bg"],
                         button_color=COLORS["accent"],
                         button_hover_color=COLORS["accent_dim"],
@@ -1162,12 +1203,21 @@ class ParamDialog(ctk.CTkToplevel):
                                  font=ctk.CTkFont(family=FONTS["mono"], size=10)
                                  ).pack(side="left", padx=(0, 5))
 
-                    def _browse(v=var, kind=p["type"]):
+                    def _browse(v=var, kind=p["type"], param_key=p["key"]):
                         from tkinter import filedialog
                         if kind == "file":
-                            selected = filedialog.askopenfilename(
-                                parent=self, title="Velg regelsett (JSON)",
-                                filetypes=[("JSON", "*.json"), ("Alle filer", "*.*")])
+                            initial = None
+                            if self._qa_dialog and param_key == 'adapter_file':
+                                from siard_workflow.core.content_qa.resource_folders import load_resource_folders
+                                selected_library = load_resource_folders().get('system_adapter_dir', '')
+                                if selected_library and Path(selected_library).is_dir():
+                                    initial = selected_library
+                            dialog_kwargs = {'parent': self,
+                                'title': 'Velg systemadapter (JSON)' if initial else 'Velg regelsett (JSON)',
+                                'filetypes': [("JSON", "*.json"), ("Alle filer", "*.*")]}
+                            if initial:
+                                dialog_kwargs['initialdir'] = initial
+                            selected = filedialog.askopenfilename(**dialog_kwargs)
                         else:
                             selected = filedialog.askdirectory(
                                 parent=self, title="Velg mappe")
@@ -1226,6 +1276,14 @@ class ParamDialog(ctk.CTkToplevel):
                 self._vars[p["key"]] = (var, p["type"])
         btns = ctk.CTkFrame(self, fg_color="transparent")
         btns.grid(row=10, column=0, padx=16, pady=(0,16), sticky="e")
+        if self._qa_dialog:
+            ctk.CTkButton(
+                btns, text="Ressursmapper...", width=142,
+                fg_color=COLORS["btn"], hover_color=COLORS["btn_hover"],
+                text_color=COLORS["btn_text"],
+                font=ctk.CTkFont(family=FONTS["mono"], size=11),
+                command=self._open_resource_folders,
+            ).pack(side="left", padx=(0, 16))
         ctk.CTkButton(btns, text="Avbryt", width=90,
                       fg_color=COLORS["btn"], hover_color=COLORS["btn_hover"], text_color=COLORS["btn_text"], border_color=COLORS["btn_border"], border_width=1,
                       font=ctk.CTkFont(family=FONTS["mono"], size=11),
@@ -1235,12 +1293,19 @@ class ParamDialog(ctk.CTkToplevel):
                       font=ctk.CTkFont(family=FONTS["mono"], size=11, weight="bold"),
                       command=self._confirm).pack(side="left")
 
+    def _open_resource_folders(self):
+        """Edit three machine-local resource paths without changing project data."""
+        from gui.resource_folders_dialog import ResourceFoldersDialog
+        ResourceFoldersDialog(self)
+
     def _confirm(self):
         if not all(fn() for fn in self._validators):
             return
         kwargs = {}
         for key, (var, typ) in self._vars.items():
             val = var.get()
+            if key == "domain_profile" and self._qa_dialog:
+                val = getattr(self, "_qa_domain_choice_ids", {}).get(val, val)
             if typ == "int":
                 try: val = int(val)
                 except ValueError: val = 0

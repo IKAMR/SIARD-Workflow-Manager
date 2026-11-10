@@ -47,6 +47,10 @@
     {
       "id": "service",
       "path": "common/service.json"
+    },
+    {
+      "id": "social_register",
+      "path": "common/social_register.json"
     }
   ],
   "domains": [

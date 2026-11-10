@@ -12,6 +12,7 @@ for %%F in (
     "main.py"
     "version.py"
     "gui\operations_panel.py"
+    "gui\resource_folders_dialog.py"
     "siard_workflow\core\base_operation.py"
     "siard_workflow\core\context.py"
     "siard_workflow\core\project_file.py"
@@ -25,6 +26,10 @@ for %%F in (
     "siard_workflow\core\content_qa\source.py"
     "siard_workflow\core\content_qa\profile.py"
     "siard_workflow\core\content_qa\model_catalog.py"
+    "siard_workflow\core\content_qa\resource_folders.py"
+    "siard_workflow\core\content_qa\adapter_review.py"
+    "siard_workflow\models\common\social_register.json"
+    "siard_workflow\models\domains\sosialtjeneste.json"
     "siard_workflow\core\content_qa\ephorte_noark4.py"
     "siard_workflow\core\content_qa\semantic_results.py"
     "siard_workflow\models\index.json"
@@ -45,12 +50,24 @@ for %%F in (
     "tests\test_content_qa_a7.py"
     "tests\test_project_file_a7.py"
     "tests\test_content_qa_a6.py"
+    "tests\test_content_qa_a8.py"
+    "tests\test_resource_folders_a8.py"
 ) do (
     if not exist "%%~F" (
         echo [FEIL] Mangler %%~F i %CD%
         set "rc=2"
         goto :done
     )
+)
+
+rem a8: gamle systemspesifikke adaptere skal ikke finnes inne i koden.
+rem Ikke slett automatisk; brukeren velger selv hvor dokumentene flyttes.
+if exist "docs\adapters\*.json" (
+    echo [FEIL] Systemadapter-JSON ligger fremdeles under docs\adapters.
+    echo Flytt filene til din EKSTERNE systemadapter-mappe.
+    echo Slett deretter kopiene fra SWM-repositoryet og kjor testen igjen.
+    set "rc=2"
+    goto :done
 )
 
 where python >nul 2>&1
@@ -91,7 +108,7 @@ if errorlevel 1 (
 )
 echo.
 echo [3b/4] Kjorer a7 prosjektfil- og checkpointtester...
-python -X utf8 -m unittest discover -s tests -p "test_project_file_a7.py" -v
+python -X utf8 -m unittest discover -s tests -p "test_project_file_a*.py" -v
 if errorlevel 1 (
     echo [FEIL] Prosjektkontrollen feilet.
     set "rc=1"
@@ -99,8 +116,17 @@ if errorlevel 1 (
 )
 
 echo.
+echo [3c/4] Kontrollerer tre eksterne ressursmapper...
+python -X utf8 -m unittest discover -s tests -p "test_resource_folders_a8.py" -v
+if errorlevel 1 (
+    echo [FEIL] Ressursmappekontrollen feilet.
+    set "rc=1"
+    goto :done
+)
+
+echo.
 echo [4/4] Kontrollerer syntaks i leverte filer...
-python -X utf8 -m py_compile "version.py" "gui\operations_panel.py" "siard_workflow\core\workflow_io.py" "siard_workflow\operations\content_qa_operation.py" "siard_workflow\operations\__init__.py" "siard_workflow\core\project_file.py" "siard_workflow\core\content_qa\__init__.py" "siard_workflow\core\content_qa\__main__.py" "siard_workflow\core\content_qa\source.py" "siard_workflow\core\content_qa\profile.py" "siard_workflow\core\content_qa\model_catalog.py" "siard_workflow\core\content_qa\ephorte_noark4.py" "siard_workflow\core\content_qa\semantic_results.py" "siard_workflow\core\content_qa\engine.py" "siard_workflow\core\content_qa\discovery.py" "siard_workflow\core\content_qa\reporting.py" "tests\test_content_qa.py" "tests\test_content_qa_discovery.py" "tests\test_content_qa_operation.py" "tests\test_content_qa_models.py" "tests\test_content_qa_ephorte_a5.py" "tests\test_content_qa_a6.py"
+python -X utf8 -m py_compile "version.py" "gui\operations_panel.py" "gui\resource_folders_dialog.py" "siard_workflow\core\content_qa\resource_folders.py" "siard_workflow\core\workflow_io.py" "siard_workflow\operations\content_qa_operation.py" "siard_workflow\operations\__init__.py" "siard_workflow\core\project_file.py" "siard_workflow\core\content_qa\__init__.py" "siard_workflow\core\content_qa\__main__.py" "siard_workflow\core\content_qa\source.py" "siard_workflow\core\content_qa\profile.py" "siard_workflow\core\content_qa\model_catalog.py" "siard_workflow\core\content_qa\adapter_review.py" "siard_workflow\core\content_qa\ephorte_noark4.py" "siard_workflow\core\content_qa\semantic_results.py" "siard_workflow\core\content_qa\engine.py" "siard_workflow\core\content_qa\discovery.py" "siard_workflow\core\content_qa\reporting.py" "tests\test_content_qa.py" "tests\test_content_qa_discovery.py" "tests\test_content_qa_operation.py" "tests\test_content_qa_models.py" "tests\test_content_qa_ephorte_a5.py" "tests\test_content_qa_a6.py" "tests\test_content_qa_a8.py" "tests\test_project_file_a8.py" "tests\test_resource_folders_a8.py"
 if errorlevel 1 (
     echo [FEIL] Kontrollen feilet.
     set "rc=1"

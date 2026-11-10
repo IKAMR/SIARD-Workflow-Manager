@@ -184,15 +184,25 @@ def load_domain_model(domain_id: str, root: str | Path | None = None) -> dict:
 def _resource_file(value: str | Path, root: str | Path | None = None) -> Path:
     """Resolve a private adapter reference without path traversal or discovery."""
     requested = Path(value).expanduser()
+    base = Path(root).expanduser().resolve() if root else None
     if requested.is_absolute():
         path = requested.resolve()
     else:
-        if not root:
-            raise ModelError('Relativ adaptersti krever en angitt fagressursmappe')
-        base = Path(root).expanduser().resolve()
+        if base is None:
+            raise ModelError('Relativ adaptersti krever at systemadapter-mappen er satt')
         path = (base / requested).resolve()
-        if not path.is_relative_to(base):
-            raise ModelError('Adapterstien peker utenfor fagressursmappen')
+    if base is not None and not path.is_relative_to(base):
+        raise ModelError(
+            'Valgt adapter ligger utenfor den konfigurerte systemadapter-mappen: '
+            + str(path))
+    # Proprietary mappings belong to a separately chosen system-info library,
+    # never in the application/repository tree. This also catches an accidental
+    # absolute path to docs/adapters inside a local checkout.
+    application_root = Path(__file__).resolve().parents[3]
+    if path.is_relative_to(application_root):
+        raise ModelError(
+            'Systemspesifikk adapter maa ligge utenfor SWM-repositoryet: '
+            + str(path))
     if not path.is_file() or path.suffix.lower() != '.json':
         raise ModelError(f'Adapter-JSON finnes ikke: {path.name}')
     return path
@@ -202,11 +212,16 @@ def load_adapter(path: str | Path, *, resource_root: str | Path | None = None) -
     """Read selected mapping from a private external JSON file; never execute SQL."""
     resolved = _resource_file(path, resource_root)
     adapter = _fields(_read(resolved),
-                      {'format_version', 'id', 'label', 'domain_id', 'visibility',
-                       'system_hint', 'standard_id', 'bindings', 'relations', 'description'}, 'adapter')
+                      {'format_version', 'id', 'label', 'domain_id', 'category_code',
+                       'visibility', 'system_hint', 'standard_id', 'bindings', 'relations',
+                       'description'}, 'adapter')
     _format(adapter, 'adapter')
     _identifier(adapter.get('id'), 'adapter.id')
     _identifier(adapter.get('domain_id'), 'adapter.domain_id')
+    if adapter.get('category_code') is not None:
+        code = _required_text(adapter['category_code'], 'adapter.category_code')
+        if not re.fullmatch(r'[1-9]-[0-9]{2}', code):
+            raise ModelError('adapter.category_code: forventer K-Id/S-Id, f.eks. 6-18')
     if adapter.get('standard_id') is not None:
         _identifier(adapter['standard_id'], 'adapter.standard_id')
     _required_text(adapter.get('label'), 'adapter.label')
@@ -260,6 +275,12 @@ def resolve_qa_model(*, domain: str | None = None, adapter_file: str = '',
         raise ModelError('Valgt fagmodell og adapterens domain_id er ulike')
     domain = selected
     model = load_domain_model(domain, model_root)
+    if adapter and adapter.get('category_code') is not None:
+        if adapter['category_code'] != model['domain']['category_code']:
+            raise ModelError(
+                'Systemadapterens category_code stemmer ikke med den valgte '
+                'fagmodellen: ' + adapter['category_code'] + ' / '
+                + model['domain']['category_code'])
     carriers = []
     by_id = {}
     for module in model['modules']:

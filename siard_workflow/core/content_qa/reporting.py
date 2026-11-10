@@ -61,6 +61,9 @@ def write_qa_reports(result: dict, output_dir: str | Path, stem: str) -> dict[st
             'foreign_keys_csv': Path(f'{path}_fremmednokler.csv'),
             'relation_proposals_csv': Path(f'{path}_relasjonsforslag.csv'),
             'pdf': Path(f'{path}.pdf'),
+            **({'adapter_review_bindings_csv': Path(f'{path}_adapter_bindinger.csv'),
+                'adapter_review_relations_csv': Path(f'{path}_adapter_relasjoner.csv')}
+               if result.get('adapter_review') is not None else {}),
         }
     paths = files_for(candidate)
     if result.get('semantic_results') is not None:
@@ -125,6 +128,17 @@ def write_qa_reports(result: dict, output_dir: str | Path, stem: str) -> dict[st
                ['origin', 'child_schema', 'child_table', 'child_columns',
                 'parent_schema', 'parent_table', 'parent_columns', 'status',
                 'note'], discovery.get('relation_proposals', []))
+    review = result.get('adapter_review')
+    if review is not None:
+        _write_csv(paths['adapter_review_bindings_csv'],
+                   ['entity_id', 'review_status', 'schema', 'table', 'key_columns',
+                    'declared_primary_key', 'metadata_rows', 'actual_rows',
+                    'missing_columns', 'metadata_status'], review['bindings'])
+        _write_csv(paths['adapter_review_relations_csv'],
+                   ['id', 'review_status', 'child', 'parent', 'child_table',
+                    'parent_table', 'child_columns', 'parent_key_columns',
+                    'type_warnings', 'metadata_status', 'declared_fk_verified'],
+                   review['relations'])
     semantic = result.get('semantic_results') or {}
     if 'semantic_metrics_csv' in paths:
         _write_csv(paths['semantic_metrics_csv'],
@@ -213,6 +227,36 @@ def _pdf_qa(result: dict, output: Path) -> None:
     if status == 'AVVIK':
         story.append(tk.note('Avvik er dokumentert i avviks-CSV. '
                              'En fullfort arbeidsflyt betyr ikke at innholdet er godkjent.', 'fail'))
+
+    # A8: show metadata checks on a SELECTED adapter independently of both
+    # generic name-based proposals and real, approved QA controls.
+    review = result.get('adapter_review')
+    if review is not None:
+        story += tk.section('Valgt systemadapter - kontroll mot SIARD-metadata')
+        story.append(tk.note(
+            'Dette bekrefter bare at oppgitte tabeller, felt og nøkler finnes. '
+            'Verken fagbegreper eller relasjoner blir godkjent automatisk. '
+            'Se adapter_bindinger.csv og adapter_relasjoner.csv.', 'warn'))
+        counts = review['summary']
+        story.append(tk.kv_table([
+            ('Adapter', E(review.get('adapter_id'))),
+            ('Bindinger foreslått', fmt_int(counts['bindings_proposed'])),
+            ('Bindinger med deklarert PK-treff', fmt_int(counts['bindings_metadata_match'])),
+            ('Bindinger som krever metadatagjennomgang', fmt_int(counts['bindings_metadata_issues'])),
+            ('Relasjonsforslag', fmt_int(counts['relations'])),
+            ('Relasjoner med typeforskjell', fmt_int(counts['relations_type_review'])),
+        ]))
+        rows = [[E(x['entity_id']), E(x['table']), E(', '.join(x['key_columns'])),
+                 E(x['metadata_status'])] for x in review['bindings']]
+        if rows:
+            story.append(tk.data_table(
+                ['Fagbegrep', 'SIARD-tabell', 'Nøkkel', 'Metadatakontroll'],
+                rows, [tk.inner_w * n for n in (.24, .23, .29, .24)],
+                font_size=7.2))
+        if counts['relations_type_review']:
+            story.append(tk.note(
+                'Noen relasjoner kobler INT til FLOAT(53). Dette er bare '
+                'kolonneforslag og ma ikke aktiveres før verdikoding er gjennomgått.', 'warn'))
 
     # Discovery is NOT the same as a completed Noark/content check. Keep it
     # visually separate from the verified QA sections.

@@ -8,10 +8,14 @@ from siard_workflow.core.context import WorkflowContext
 from siard_workflow.core.content_qa import run_content_qa
 from siard_workflow.core.content_qa.reporting import write_qa_reports
 from siard_workflow.core.content_qa.model_catalog import (
-    resolve_qa_model, inspect_resource_library,
+    resolve_qa_model, load_adapter,
+)
+from siard_workflow.core.content_qa.resource_folders import (
+    load_resource_folders, inspect_resource_folders,
 )
 from siard_workflow.core.content_qa.domain_metrics import build_domain_metrics
 from siard_workflow.core.content_qa.migration_a6 import unsupported_legacy_options
+from siard_workflow.core.content_qa.adapter_review import review_adapter_against_catalog
 
 
 class ContentQAOperation(BaseOperation):
@@ -106,8 +110,12 @@ class ContentQAOperation(BaseOperation):
 
         try:
             source, source_type, source_mode, source_origin = self._select_source(ctx)
-            resources_root = str(self.params.get('resources_root') or '').strip()
-            library = inspect_resource_library(resources_root)
+            folders = load_resource_folders()
+            # The dedicated system-adapter directory takes precedence over the
+            # old a8 `resources_root`, retained for earlier .siardwf files.
+            resources_root = (folders['system_adapter_dir']
+                              or str(self.params.get('resources_root') or '').strip())
+            library = inspect_resource_folders(folders)
             profile, model_context = resolve_qa_model(
                 domain=str(self.params.get('domain_profile') or 'saksarkiv'),
                 adapter_file=str(self.params.get('adapter_file') or ''),
@@ -116,10 +124,17 @@ class ContentQAOperation(BaseOperation):
             for warning in unsupported_legacy_options(self.params):
                 message('  ' + warning, 'warn')
             if library['configured']:
-                message('  Fagressursbibliotek: ekstern mappe er tilgjengelig '
-                        '(Decom/KDRS-maler blir ikke lastet automatisk)')
+                message('  Ressursmapper: Decom=' +
+                        ('valgt' if folders['decom_templates_dir'] else 'ikke satt') +
+                        '; KDRS Søk & Vis=' +
+                        ('valgt' if folders['kdrs_sok_vis_dir'] else 'ikke satt') +
+                        '; systemadaptere=' +
+                        ('valgt' if resources_root else 'ikke satt') +
+                        ' (ingen automatisk KDRS-import)')
             if model_context['mode'] == 'domain':
-                message('  Fagmodell: ' + model_context['domain_id'] +
+                category = model_context.get('category_code') or ''
+                domain_label = str(profile.get('label') or model_context['domain_id']).removeprefix('Fagmodell: ')
+                message('  Fagmodell: ' + (category + ' ' if category else '') + domain_label +
                         f'; moduler: {len(model_context["module_ids"])}; '
                         f'godkjente kartlegginger: {model_context["bindings_applied"]}; '
                         f'forslag som ikke aktiveres: {model_context["bindings_pending"]}')
@@ -144,9 +159,34 @@ class ContentQAOperation(BaseOperation):
             result['source_origin'] = source_origin
             result['input_siard_name'] = Path(ctx.siard_path).name
             result['model_context'] = model_context
+            if model_context.get('mode') == 'domain':
+                result['system_category'] = {
+                    'code': model_context.get('category_code'),
+                    'label': str(profile.get('label') or '').removeprefix('Fagmodell: '),
+                    'domain_id': model_context['domain_id'],
+                }
+            # A8: review the selected, explicit adapter against the real catalog.
+            # This does not enable or approve any proposed bindings.
+            adapter_ref = str(self.params.get('adapter_file') or '').strip()
+            if adapter_ref:
+                adapter, _ = load_adapter(adapter_ref, resource_root=resources_root)
+                result['adapter_review'] = review_adapter_against_catalog(
+                    adapter, result['catalog'])
+                check = result['adapter_review']['summary']
+                message('  Adapter mot metadata: '
+                        f'{check["bindings_metadata_match"]}/{check["bindings"]} '
+                        'bindinger med deklarert PK; '
+                        f'{check["relations_type_review"]} relasjoner trenger typegjennomgang; '
+                        'INGEN automatisk faglig godkjenning')
             result['resource_library'] = library
+            result['resource_folders_configured'] = {
+                'decom_templates': bool(folders['decom_templates_dir']),
+                'kdrs_sok_og_vis_templates': bool(folders['kdrs_sok_vis_dir']),
+                'system_adapters': bool(resources_root),
+            }
             result['semantic_results'] = build_domain_metrics(result, model_context)
             output_dir = Path(ctx.metadata.get('log_dir') or Path(ctx.siard_path).parent)
+            message(f'  QA-rapportmappe (uavhengig av prosjektfil): {output_dir}')
             paths = write_qa_reports(result, output_dir, Path(ctx.siard_path).stem)
             summary = result['summary']
             data = {
@@ -168,6 +208,8 @@ class ContentQAOperation(BaseOperation):
                 'qa_relations_verified': summary['relations_verified'],
                 'qa_profile_id': result['profile_id'],
                 'qa_domain_id': model_context['domain_id'],
+                'qa_category_code': model_context.get('category_code'),
+                'qa_category_label': result.get('system_category', {}).get('label'),
                 'qa_model_sha256': model_context['model_sha256'],
                 'qa_adapter_id': model_context['adapter_id'],
                 'qa_adapter_sha256': model_context['adapter_sha256'],
@@ -184,6 +226,8 @@ class ContentQAOperation(BaseOperation):
                 'qa_foreign_keys_csv': paths['foreign_keys_csv'],
                 'qa_relation_proposals_csv': paths['relation_proposals_csv'],
                 'qa_mapping_json': paths['mapping_json'],
+                'qa_adapter_review_bindings_csv': paths.get('adapter_review_bindings_csv'),
+                'qa_adapter_review_relations_csv': paths.get('adapter_review_relations_csv'),
                 'qa_discovery_carriers_with_candidates': summary['discovery_carriers_with_candidates'],
                 'qa_discovery_declared_foreign_keys': summary['discovery_declared_foreign_keys'],
                 'qa_discovery_relation_proposals': summary['discovery_relation_proposals'],

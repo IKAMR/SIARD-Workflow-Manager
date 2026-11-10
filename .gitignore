@@ -7,9 +7,12 @@
 *.zip
 debug.log
 config.json
+resource_folders.json
 extras/
 # Lokale eksempelfiler for testing (skal ikke i git)
 eksempelfiler/
+# Systemspesifikke adaptere skal ligge EKSTERNT, ikke under SWM docs.
+docs/adapters/*.json
 # Generert testuttrekk (inneholder eksempelfiler) — lag på nytt med testsiard/lag_testsiard.py
 testsiard/
 

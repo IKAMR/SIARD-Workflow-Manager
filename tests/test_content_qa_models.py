@@ -1,4 +1,7 @@
-"""A4: shared system models + private adapter integration (synthetic data only)."""
+"""A4: shared system models + private adapter integration (synthetic data only).
+
+Unit tests must not depend on the machine's global resource-folder choices.
+"""
 from __future__ import annotations
 
 from copy import deepcopy
@@ -7,6 +10,7 @@ from pathlib import Path
 import shutil
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from siard_workflow.core.content_qa.engine import run_content_qa
 from siard_workflow.core.content_qa.model_catalog import (
@@ -51,6 +55,15 @@ class ModelCatalogTests(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.tmp = Path(tmp.name)
+        # A8: isolate operation tests from the user's saved Decom, KDRS and
+        # system-adapter directories. Test fixtures live only in TemporaryDirectory.
+        self._folder_patch = patch(
+            'siard_workflow.operations.content_qa_operation.load_resource_folders',
+            return_value={'decom_templates_dir': '', 'kdrs_sok_vis_dir': '',
+                          'system_adapter_dir': ''},
+        )
+        self._folder_patch.start()
+        self.addCleanup(self._folder_patch.stop)
 
     def _adapter(self, content=None) -> Path:
         path = self.tmp / 'adapters' / 'synthetic.json'

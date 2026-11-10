@@ -1,0 +1,87 @@
+{
+  "format_version": 1,
+  "id": "social_register",
+  "label": "Sosialregister og sosialfaglig saksbehandling",
+  "description": "Leverandoruavhengig arbeidsmodell for klientrelaterte sosialtjenestedata. Beskriver ikke fysiske databaser og godkjenner ingen mapping automatisk. Fritekst i CLOB/NCLOB er feltverdier, ikke automatisk dokumentfiler.",
+  "entities": [
+    {
+      "id": "social_application",
+      "label": "Søknad",
+      "aliases": [
+        "søknad",
+        "soeknad",
+        "soknad"
+      ]
+    },
+    {
+      "id": "social_decision",
+      "label": "Vedtak",
+      "aliases": [
+        "vedtak",
+        "avgjørelse",
+        "beslutning"
+      ]
+    },
+    {
+      "id": "social_journal_entry",
+      "label": "Sosialfaglig journaloppføring",
+      "aliases": [
+        "saksjournal",
+        "tiltaksjournal",
+        "journalnotat",
+        "journal"
+      ]
+    },
+    {
+      "id": "social_case_process",
+      "label": "Saksbehandlingsforløp",
+      "aliases": [
+        "saksgang",
+        "saksforløp",
+        "saksbehandling"
+      ]
+    },
+    {
+      "id": "social_plan",
+      "label": "Plan/oppfølgingsplan",
+      "aliases": [
+        "tiltaksplan",
+        "oppfølgingsplan",
+        "plan"
+      ]
+    },
+    {
+      "id": "social_income_expense",
+      "label": "Inntekts-/utgiftsopplysning",
+      "aliases": [
+        "inntekt",
+        "utgift",
+        "økonomisk beregning"
+      ]
+    },
+    {
+      "id": "social_transaction",
+      "label": "Økonomisk transaksjon",
+      "aliases": [
+        "transaksjon",
+        "utbetaling"
+      ]
+    },
+    {
+      "id": "social_decision_status",
+      "label": "Vedtaksstatus/historikk",
+      "aliases": [
+        "vedtakstatus",
+        "vedtaksstatus"
+      ]
+    },
+    {
+      "id": "social_intervention_status",
+      "label": "Tiltaksstatus/historikk",
+      "aliases": [
+        "tiltakstatus",
+        "tiltaksstatus"
+      ]
+    }
+  ]
+}
