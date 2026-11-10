@@ -1,233 +1,266 @@
-# Innholdskontroll (QA) - rammeverk og ePhorte-pilot
+# Innholdskontroll (QA) av SIARD
 
-**Utviklingssprint:** `v1.4.23-ikamr-04-a4` (bygger videre paa a1-a3)  
-**Gren:** `feature/innholdskontroll`  
-**Status:** Rammeverk/pilot - ikke arkivfaglig ferdigkontrollert.
+Innholdskontroll er et **generisk, skrivebeskyttet** rammeverk for kartlegging og kontroll av databasetabeller og faglige informasjonsbærere i SIARD. De faglige modellene er arbeidsutkast; kontrollresultater må ikke forveksles med fullstendig arkivfaglig godkjenning.
 
-## Nytt i a4: generiske fagmodeller og privat adapterbibliotek
+Dette er den **samlede funksjonsdokumentasjonen** for innholdskontroll. Bruksmåte, modeller, adaptere, ressursmapper, rapportering og fagsystemreferanser dokumenteres her, uten separate dokumenter for hvert utviklingstrinn.
 
-A4 introduserer 10 felles moduler, 7 forelopige fagmodeller og de historiske
-9+20 ASTA/KAISA-/kommunale systemkategoriene som versjonerte, data-only JSON.
-Under **Innholdskontroll** kan operatøren velge fagmodell, eksisterende
-fagressursmappe (Decom/KDRS/adaptere) og en ekstern systemadapter i JSON.
-Kun bindinger merket `approved` brukes til radkontroll; `proposed` er fortsatt
-ukontrollerte forslag. Samme QA-rapportstruktur gjelder. Gammel QA-mal og
-standard ePhorte-kartlegging fungerer uendret uten nye innstillinger.
+## Ansvar og avgrensning
 
-Se `docs/INNHOLDSKONTROLL-A4-MODELLER-OG-ADAPTERE.md` for nøyaktig filstruktur,
-API, valg i GUI og avgrensninger. Ingen proprietære leverandørmappinger eller
-KDRS-/Decom-maler er inkludert i GitHub-deltaen.
+- QA-kjernen leser SIARD-metadata og, når valgt, datarader. Den endrer verken mottatt `.siard` eller en eksisterende utpakket kilde.
+- Kataloginformasjon, uverifiserte kartleggingsforslag, faktisk utførte datakontroller og faglige konklusjoner skal holdes tydelig atskilt.
+- Fagmodellene uttrykker **konsepter**, ikke bestemte leverandørers tabell- eller kolonnenavn. En fysisk kobling krever en eksplisitt valgt og gjennomgått adapter.
+- En automatisk navnematch, en deklarert fremmednøkkel eller en historisk SQL-referanse er ikke i seg selv dokumentasjon på riktig faglig mapping.
+- Dette erstatter ikke Arkade 5, DBPTK, Noark 4-/Noark 5-validering eller sammenligning mot arkivskapers produksjonssystem.
 
-## Formål og avgrensning
+## Kilder og plassering i arbeidsflyten
 
-Kontrollere antall og kvalitet på informasjonsbærere i et SIARD-uttrekk. Motoren er **generisk og skrivebeskyttet**. All faglig tolkning av ePhorte, Noark 4/5, barnevern, helse, skole osv. skal defineres i et JSON-malsett, ikke hardkodes i Python.
+Velg **Kilde for innholdskontroll** under operasjonen i GUI:
 
-Dette er **ikke** en Noark 5-validering og erstatter ikke Arkade 5, DBPTK eller sammenligning med produksjonssystemet. Første sprint leverer faktisk kode for SIARD-opptellinger, databaserelasjoner i QA-mal og rapportering, **ikke** ferdig fysisk kartlegging av ePhorte-tabeller.
+| Kildevalg | Adferd |
+| --- | --- |
+| **Automatisk** (standard) | Bruk gyldig utpakket SIARD-arbeidsmappe når den finnes; ellers aktiv `.siard`-fil. |
+| **Utpakket SIARD** | Bruk eksplisitt valgt eller arbeidsflytens utpakkede mappe; manglende/ugyldig mappe er en feil, ikke grunnlag for stille fallback. |
+| **SIARD-fil** | Bruk den aktive SIARD-filen selv om en utpakket mappe finnes. |
 
-## Nytt i a3: Velg QA-kilde (utpakket SIARD eller SIARD-fil)
+En valgfri **Utpakket SIARD-mappe** må ha `header/metadata.xml` (eller `metadata.xml` i valgt rot, der denne kildestrukturen brukes). Den brukes ved automatisk eller eksplisitt utpakket-kildevalg, men overstyrer ikke **SIARD-fil**. Kildevalget lagres med operasjonsparametrene i prosjektet.
 
-Innholdskontroll kan lese **begge** kildetyper. Brukeren velger under
-**Innhold → Innholdskontroll → Kilde for innholdskontroll**. Kildevalget lagres
-som en del av operasjonsparametrene i profil/prosjekt og beholdes ved gjenåpning.
+Typiske kjeder:
 
-| Kildevalg | Hva skjer |
-|---|---|
-| **Automatisk** (standard) | Bruk en gyldig utpakket SIARD-arbeidsmappe fra `Pakk ut SIARD`, dersom den fremdeles er tilgjengelig. Ellers bruk aktiv `.siard`-fil, for eksempel etter `Pakk sammen SIARD`. |
-| **Utpakket SIARD** | Bruk utpakket mappe fra arbeidsflyten eller manuelt valgt mappe. Hvis den ikke finnes, meldes feil. Det skjer **ingen stille tilbakekobling** til SIARD-filen. |
-| **SIARD-fil** | Bruk aktiv SIARD-fil fra arbeidsflyten, også dersom det finnes en utpakket arbeidsmappe. |
+- `Pakk ut SIARD → konvertering/retting → Innholdskontroll → Pakk sammen SIARD` kontrollerer arbeidskopien før sammenpakking.
+- `Pakk ut SIARD → konvertering/retting → Pakk sammen SIARD → Innholdskontroll` kontrollerer den ferdige SIARD-filen.
+- Innholdskontroll kan også kjøres direkte på en `.siard` uten utpakking.
 
-**Utpakket SIARD-mappe (valgfri):** Velg en eksisterende rotmappe som inneholder
-`header/metadata.xml` dersom du vil analysere en mappe som ikke ble produsert
-av arbeidsflytens `Pakk ut SIARD`. Dette overstyrer arbeidsflytens utpakkede
-mappe i **Automatisk** og **Utpakket SIARD**, men ikke i **SIARD-fil**.
-Ugyldig manuelt valgt mappe gir feil, ikke et stille bytte til en annen kilde.
+Rapporten og loggen dokumenterer valgt og faktisk kildetype, kildeopprinnelse og identifikasjon. Rapportnavn tar utgangspunkt i SIARD-filen som behandles, ikke et tilfeldig navn på en midlertidig mappe.
 
-**Eksempler på rekkefølge:**
+## Tekniske kontroller
 
-- `Pakk ut SIARD → rettinger/konvertering → Innholdskontroll → Pakk sammen SIARD`
-  gir kontroll mot arbeidskopien som senere pakkes. Bruk *Automatisk* eller
-  *Utpakket SIARD*.
-- `Pakk ut SIARD → rettinger/konvertering → Pakk sammen SIARD → Innholdskontroll`
-  gir kontroll av den nye, ferdigpakkede SIARD-filen. Bruk *Automatisk* eller
-  *SIARD-fil*.
-- Med bare en SIARD-fil i køen kan QA kjøres alene. Bruk *Automatisk* eller
-  *SIARD-fil*. En selvstendig, utpakket mappe kan velges under mappeparameteren.
+### SIARD-katalog og kartleggingsforslag
 
-**Sporbarhet:** Kildevalg, faktisk kildetype, kildens navn og opprinnelse vises
-både i QA-rapportens forside, JSON-resultatet og kjøreloggen. Rapportfilene
-navngis etter SIARD-filen i køen, ikke etter et tilfeldig navn på temp-mappen.
-QA endrer aldri utpakket mappe eller SIARD-fil.
+`header/metadata.xml` brukes til katalog over skjemaer, tabeller, kolonner, datatyper og beskrivelser, deklarerte radantall, primærnøkler, kandidatnøkler og fremmednøkler. Motoren kan rangere tabellkandidater for faglige informasjonsbærere ved navnelikhet og metadatabeskrivelser. Også mulige nøkkel-, status- og datokolonner kan foreslås.
 
-## Levert i a1
+Forslagene er **UBEKREFTET** og skal ikke automatisk fylle inn `source`, `key`, `status_column`, `date_column` eller `relations` i en aktiv profil. Metadata-deklarerte fremmednøkler må også skilles fra relasjoner som bare er navneforslag.
 
-1. Leser `header/metadata.xml` fra `.siard` eller utpakket SIARD-mappe. Oppretter katalog over schemas, tabeller, kolonner, datatyper, beskrivelser, deklarerte radantall og primærnøkler.
-2. Kan strømme alle `tableX.xml`-rader og kontrollere antall mot metadata. Kontrollerer også deklarerte primærnøkler for duplikater og NULL-verdier (valgbart). Leser ikke binære dokument-LOB-er.
-3. Leser **versjonert JSON QA-profil** for faglige informasjonsbærere. En profil kan definere tabell, identifiserende nøkkel, statuskolonne, datokolonne og referansetall.
-4. Kontrollerer unike nøkler, tomme nøkkelverdier og duplikater for definerte informasjonsbærere.
-5. Kontrollerer manuelt kartlagte relasjoner mot primærnøkler, registrerer foreldreløse referanser og eventuelt påkrevde, men manglende fremmednøkler.
-6. Regner statusfordelinger og årstall for eksplisitt valgte kolonner.
-7. Skriver separate **PDF, JSON, tabell-CSV, informasjonsbærer-CSV og avviks-CSV** under kjøringens loggmappe. PDF-stilen bruker appens eksisterende `report_style.py`.
-8. Integreres i arbeidsflyt/profiler/prosjekt via vanlig `BaseOperation`, `workflow_io.py` og fanen **Innhold**.
+### Radskanning, nøkler og relasjoner
 
-## Nytt i a2: automatisk kartlegging fra SIARD-metadata
+Med **Tell og kontroller alle tabellrader = Ja** kan motoren:
 
-Dette er en kartleggingsmotor i tillegg til QA-kontrollene i a1. Den leser bare
-SIARD-katalogen (metadata.xml), og kan brukes uten å skanne tabellradene.
+- Strømme `tableX.xml` og sammenligne observert radantall med SIARD-metadata.
+- Kontrollere deklarerte primærnøkler for reelle `NULL`-verdier og duplikater når kontrollen er aktivert.
+- Kontrollere eksplisitt kartlagte faglige informasjonsbærere, unike/sammensatte nøkler, manglende nøkkelverdier og forventede antall (`exact`, `min`, `max`).
+- Kontrollere aktiverte relasjoner mot refererte nøkler og registrere foreldreløse referanser og manglende påkrevde fremmednøkler.
+- Beregne status- og årsfordelinger fra eksplisitt angitte felt, samt `distinct_metrics` for godkjente kolonnekombinasjoner.
 
-1. Parser deklarerte **fremmednøkler** (referert schema, tabell og kolonner) og
-   kandidatnøkler fra metadata.xml i tillegg til primærnøkler.
-2. Rangerer forslag til tabeller for de 13 ePhorte/Noark-begrepene etter
-   **navnelikhet og metadata-beskrivelser**, med et kontrollert sett aliaser i
-   standardprofilen. Kildetabellene blir aldri automatisk valgt.
-3. Foreslår nøkkelfelt fra deklarert primærnøkkel/kandidatnøkkel, eller et
-   eksplisitt merket navneforslag dersom ingen nøkkel er deklarert.
-4. Foreslår mulige status-/datokolonner kun ut fra kolonnenavn.
-5. Skiller mellom **deklarerte metadata-relasjoner** og **navnebaserte forslag**.
-   Ingen av dem regnes som kontrollert referanseintegritet uten eksplisitt
-   QA-mapping og dataskann.
-6. Lager en egen kartleggingsseksjon i eksisterende PDF-kontrollrapport og
-   egne eksportfiler (se under).
+Dette er bevisst ikke en generell SQL-motor. Programmet leser tabellrader strømmet, bruker en midlertidig SQLite-indeks for nøkler/referanser og lagrer bare nøklede HMAC-fingeravtrykk av identifikatorer. Den midlertidige databasen slettes når kjøringen er ferdig. Rå person-/identifikatorverdier skal ikke havne i rapporter.
 
-### Ny rapportering
+**Tomme strenger er ikke SQL `NULL`:** En eksisterende XML-celle med `<c1/>` eller `<c1></c1>` behandles som tom streng; en utelatt celle eller `xsi:nil="true"` behandles som `NULL`. Tom streng i en deklarert primærnøkkel gir merknad (`metadata_pk_empty`, teller `pk_empty`), mens faktisk `NULL` og duplikat er avvik. Dette skillet ble viktig ved kontroll av `dbo.LAGRFORMAT.LF_KODE` i et ePhorte-uttrekk.
 
-I tillegg til de fem a1-utdataene produserer a2:
+For sammensatte `DISTINCT`-målinger inngår ikke `NULL`-nøkler i antallet; manglende verdier registreres separat som `distinct_missing`.
 
-| Filendelse | Innhold |
-|---|---|
-| `_kartleggingsforslag.json` | Alle kandidater, poengscore, begrunnelser og kildefelt for manuell gjennomgang |
-| `_kartleggingsforslag.csv` | Rangerte forslag per fagbegrep, med nøkkel-, status- og datofelt |
-| `_fremmednokler.csv` | Fremmednøkler fra `metadata.xml` og om referert tabell/kolonner finnes i katalogen |
-| `_relasjonsforslag.csv` | Mulige relasjoner basert på feltnavn som **ikke** er deklarerte fremmednøkler |
+## Generiske fagmodeller
 
-**VIKTIG:** `score` er en navnelikhetsrangering, ikke en sannsynlighet eller
-arkivfaglig godkjenning. Forslag i CSV/JSON har status `UBEKREFTET`.
-Ingen `source`, `key`, `status_column`, `date_column` eller `relations` settes
-automatisk i din QA-mal. Godkjenn koblingene mot ePhortes fysiske modell,
-Decom/KDRS-mal eller systemdokumentasjon før du aktiverer fagkontrollene.
+Biblioteket under `siard_workflow/models/` er **data-only JSON** og består av:
 
-### Første kartlegging på ePhorte
+- `index.json`: eksplisitt indeks over moduler, domener og taksonomi.
+- `common/*.json`: 12 fellesmoduler for blant annet person, kontaktopplysninger, klientregister, sak, registrering/journalpost, hendelseslogg, dokumentkjede, filreferanse, tilgang, tjenester/tiltak og sosialfaglig saksbehandling (`social_register`).
+- `domains/*.json`: foreløpige domener for `saksarkiv`, `barnevern`, `skole`, `ppt`, `helsetjeneste`, `pleie_omsorg` og `sosialtjeneste`.
+- `taxonomies/kommunale_systemkategorier.json`: historisk kategorigrunnlag fra IKAMRs `0000-kommune-elarkiv.xlsx` (15.05.2020) med 9 ASTA/KAISA-hovedkategorier og 20 kommunale kategorier. Dette er klassifikasjon, ikke bevis for at alle kategorier har en modell.
+- `standards/noark4_saksarkiv_reference.json`: konseptuelle Noark 4-kryssreferanser, **ikke** verifisert databaseskjema.
 
-- I GUI: velg **Innholdskontroll** og sett **Tell og kontroller alle tabellrader**
-  til **Nei**. Da lages kartleggingsforslag raskt fra metadata, uten radskann.
-- Alternativt fra terminal i repositoryroten:
+Alle domenemodellene kan ha status `draft` eller `pilot`, og de foreliggende modellene er arbeidsutkast. En systemkategori betyr ikke at programmet har en fullstendig modell, bestemte tabeller eller dokumenterte fagkrav. Manglende fagområder skal ikke fylles med ubegrunnede antakelser.
 
-```bat
-python -X utf8 -m siard_workflow.core.content_qa "D:\SIARD\ephorte.siard" --kartlegging --out "D:\SIARD\kontroll"
-```
+### Systemadaptere og eksplisitt godkjenning
 
-- Åpne `_kartleggingsforslag.csv`, `_fremmednokler.csv` og
-  `_relasjonsforslag.csv`. Bekreft hvilke tabeller og nøkler som faktisk
-  representerer **sak, journalpost og dokument**. Lag så en kopi av
-  `ephorte_template.json` der `source` og `key` settes for bekreftede objekter.
-- Etter godkjent mapping: slå på radskann og kjør den faktiske QA-kontrollen.
-  Forvent `DELVIS_KONTROLLERT` så lenge andre fagbegreper ikke er kartlagt.
+En adapter er en separat JSON-fil med versjonert struktur. Den velger `domain_id` og kan angi `category_code`, `standard_id`, konkrete `source`-tabeller, `key`-kolonner, andre felt og relasjoner. System- og leverandørspesifikke adaptere **skal ligge utenfor SWM-repositoryet**, i en eksplisitt valgt ekstern katalog. Programmet avviser adapterfiler inne i repository-treet.
 
-## Hva "kontrollert" betyr
-
-| QA-status | Betydning | Arbeidsflyt-steg |
-|---|---|---|
-| `GODKJENT` | Alle definerte kontroller er kjørt og uten avvik | OK |
-| `DELVIS_KONTROLLERT` | En eller flere tabeller, faglige objekter eller relasjoner er ikke kartlagt eller kontrollert | Feilstatus; andre rapportsteg fortsetter |
-| `AVVIK` | Faktiske avvik i utførte kontroller | Feilstatus; andre rapportsteg fortsetter |
-
-En fullført kjøring med en **ukartlagt ePhorte-mal** gir dermed aldri grønn godkjenning for informasjonsbærerne, selv om alle databaserader er telt uten tekniske feil.
-
-## Hvorfor ePhorte-malen ikke har tabellnavn ennå
-
-Noark har de konseptuelle nivåene arkiv, arkivdel, klasse, mappe, registrering, dokumentbeskrivelse, dokumentobjekt osv. Men tabeller og relasjoner i en ePhorte-produksjonsdatabase kan ha andre navn og avvike mellom versjoner. Det er derfor **ikke forsvarlig** å anta at tabell `SAK` eller `JOURNALPOST` finnes i SIARD.
-
-Malsettet i `siard_workflow/rules/content_qa/ephorte_template.json` har 13 logiske informasjonsbærere, foreløpig med `"source": null`. Bruk SIARD-katalogen fra første QA-kjøring og eventuelt Decom-/KDRS Søk & Vis-maler og dokumentasjon for å fastsette korrekt tabell og nøkkel.
-
-## Eksempel på kartlegging (fiktive tabellnavn!)
-
-Legg inn `source` og `key` i kopien av JSON-malen for ditt **faktiske** uttrekk. Eksempel på **syntetisk** datamodell:
+Eksempel med **syntetiske** navn:
 
 ```json
 {
   "format_version": 1,
-  "id": "syntetisk-noark-demo",
-  "label": "Kun et eksempel - ikke bruk ukritisk på ePhorte",
-  "carriers": [
+  "id": "syntetisk_saksarkiv",
+  "label": "Demoadapter",
+  "domain_id": "saksarkiv",
+  "visibility": "internal",
+  "bindings": [
     {
-      "id": "sak", "label": "Saker",
+      "entity_id": "case_file",
+      "review_status": "approved",
       "source": {"schema": "schema0", "table": "SAK"},
-      "key": ["SAK_ID"], "status_column": "SAKSSTATUS",
-      "date_column": "OPPRETTET", "expected_count": {"exact": 1200}
-    },
-    {
-      "id": "jp", "label": "Journalposter",
-      "source": {"schema": "schema0", "table": "JOURNALPOST"},
-      "key": ["JP_ID"]
+      "key": ["SAK_ID"]
     }
   ],
-  "relations": [
-    {
-      "id": "jp_til_sak", "child": "jp", "parent": "sak",
-      "child_columns": ["SAK_ID"], "required": true
-    }
-  ]
+  "relations": []
 }
 ```
 
-`key` kan være en sammensatt liste over flere kolonner. En relasjon må ha like mange `child_columns` som foreldrens nøkkelfelter. `expected_count` støtter `exact`, `min` og `max` som ikke-negative heltall. Tomme valgbare fremmednøkler blir ikke feil. Sett `required: true` når feltet etter systemets modell er obligatorisk.
+Kun bindinger med `review_status: "approved"` brukes i reell faglig radkontroll. `proposed` er et uverifisert forslag, ikke en aktiv kontroll. Godkjenning i JSON er en erklæring fra operatøren og **ikke** automatisk depotgodkjenning. `approved` krever fysisk tabell og nøkkel. Uten godkjent adapter er fagbegreper `IKKE_KONTROLLERT`, også om tabellopptellingene er korrekte.
+
+Adapterens `domain_id` må stemme med valgt fagmodell, og en oppgitt `category_code` må stemme med fagmodellens kategori (for eksempel `6-18`). Uten eksplisitt domenevalg kan adapterens `domain_id` brukes som valg. Ukjente felter, ugyldige verdier, stier utenfor valgt systemadaptermappe og adaptere inne i repoet avvises. Det kjøres ikke SQL eller Python-uttrykk fra adapterfilen. Eldre QA-mal/profil er ikke lenger et eget valg i den generiske GUI-dialogen eller CLI-en.
+
+### Tre uavhengige ressursmapper
+
+I **Innhold → Innholdskontroll → konfigurer operasjon** finnes knappen **Ressursmapper…** nederst i dialogen. Velg eksisterende kataloger med **Bla…** og klikk **Lagre mapper**. Katalogene kan ligge på forskjellige disker; tomt felt er tillatt, men en oppgitt mappe må eksistere. De opprettes ikke av programmet og gjennomsøkes ikke automatisk.
+
+| Ressurs | Bruk og lagring | Virkning i innholdskontroll |
+| --- | --- | --- |
+| **Decom / SIARDMapper-maler** | Eksisterende `json_template_dir` i lokal `config.json`. Stien videreføres, ikke flyttes. | Maler er referanse-/verktøyressurser, ikke automatisk QA-mapping. |
+| **KDRS Søk & Vis-maler** | `kdrs_sok_vis_dir` i lokal `resource_folders.json`. | Bare valgt katalog; ingen automatisk import eller KDRS-basert fagkontroll. |
+| **Systemadaptere til fagmodeller** | `system_adapter_dir` i lokal `resource_folders.json`. | Filvelgeren for **Ekstern systemadapter (JSON)** starter her; kun eksplisitt valgte adaptere leses. |
+
+`resource_folders.json` ligger i programmets lokale dataområde og er utelatt fra Git. Dette er felles maskininnstillinger, **ikke** innstillinger for plassering av prosjektfiler, SIARD-kilder eller rapporter. En ugyldig JSON eller en ikke-eksisterende mappe meldes som feil ved lesing/lagring. Ingen proprietære ressurser kopieres automatisk.
+
+Eldre `.siardwf`-prosjekter kan inneholde `resources_root`. Denne brukes som kompatibilitetsfallback når en ny `system_adapter_dir` ikke er satt. Når en dedikert systemadaptermappe er valgt, har den forrang: absolutte eller relative adapterstier som peker utenfor denne katalogen avvises. Velg da adapterfilen på nytt i den konfigurerte mappen.
+
+En ekstern systeminformasjonskatalog kan for eksempel organiseres slik (plassering og navnevalg er lokale):
+
+```text
+<ekstern-systeminformasjon>/
+  6-18-sosialtjeneste/
+    <fagsystem>/
+      <adapter-id>_sosialtjeneste_proposed.json
+      systemdokumentasjon/
+```
+
+Systemspesifikke mappinger og dokumentasjon må lagres utenfor dette offentlige kode-repositoriet. `docs/examples/synthetic_saksarkiv_adapter.json` er derimot et **syntetisk** eksempel uten produksjonsdata. En ekstern ressursmappe er ikke identisk med kildemappe, arbeidsområde eller rapportmappe.
+
+### Sosialtjeneste og leverandøruavhengige begreper
+
+Fagmodellen `sosialtjeneste` er et **utkast** med systemkategori **`6-18 Sosialtjeneste`**. Modulen `social_register` supplerer delte moduler med faglige konsepter, blant annet:
+
+- søknad (`social_application`), vedtak (`social_decision`) og saksbehandlingsforløp;
+- sosialfaglig journaloppføring og planer/oppfølgingsplaner;
+- inntekts-/utgiftsopplysninger og økonomiske transaksjoner;
+- historikk for vedtaks- og tiltaksstatus.
+
+**Klient/person må skilles fra systembruker; vedtak må skilles fra tiltak.** CLOB/NCLOB-felt kan inneholde faglige tekstverdier og er ikke automatisk dokumentfiler. Leverandørspesifikke tabell-/kolonnenavn (for eksempel `inntutg` og `trans`) skal ikke være aliaser i generiske moduler. Slike navn hører hjemme i ekstern, eksplisitt gjennomgått systemmapping. En modell beskriver ikke fysisk databaseskjema, og ingen mapping blir godkjent automatisk.
+
+### Kontroll av valgt adapter mot SIARD-metadata
+
+Når en ekstern adapter er eksplisitt valgt, lages en **separat metadatagjennomgang**. Denne kontrollerer om angitte tabeller, kolonner og deklarerte primærnøkler finnes i akkurat dette SIARD-uttrekket. For relasjoner kontrolleres kolonnepar og datatypenes hovedfamilier. Mulige statusmeldinger omfatter:
+
+- `METADATA_TREFF`, `TABELL_MANGLER`, `KOLONNER_MANGLER` eller `NOKKEL_KREVER_GJENNOMGANG` for bindinger;
+- `KOLONNER_FUNNET`, `TYPE_GJENNOMGANG` eller manglende nøkkel-/kolonnepar for relasjoner.
+
+**Ingen av disse er faglig godkjenning.** Datatypeavvik, som `INT` mot `FLOAT`, krever menneskelig gjennomgang. Kontroll av tabell-/feltnavn beviser verken korrekt faglig semantikk eller referanseintegritet i radinnhold. `review_status: proposed` forblir inaktiv etter en metadatamatch; godkjenning skjer eksplisitt i ekstern adapter. Resultatene skilles fra generelle navnebaserte forslag og fra faktisk utførte datakontroller. De eksporteres til `_adapter_bindinger.csv` og `_adapter_relasjoner.csv` ved siden av øvrige QA-filer.
+
+## Noark 4- og ePhorte-referanse (fagspesifikt tillegg)
+
+Generisk innholdskontroll skal ikke være avhengig av ePhorte. Historisk ble en separat Noark 4-orientert pilot brukt til å prøve arkivfaglige begreper, SQL-katalogreferanser og en **privat** adaptergenerator. `siard_workflow/core/content_qa/ephorte_noark4.py` eksisterer fortsatt som fagsystemspesifikk kode, men den generiske QA-dialogen tilbyr **ikke** automatisk generering av ePhorte-adaptere. Gammel prosjektparameter `propose_ephorte_noark4_adapter=true` skal kun gi migreringsadvarsel, og skal ikke skrive adapterfil.
+
+Noark 4-referansen omfatter blant annet arkiv, arkivdel, arkivperiode, ordningsprinsipp/-verdi, sak, journalpost, avsender/mottaker, dokumentkjede og merknad. `siard_workflow/models/standards/noark4_saksarkiv_reference.json` bruker offentlige Noark 4 DTD-navn og historiske kontroll-ID-er som **forslag**, ikke en verifisert ePhorte-databasemodell.
+
+| Konsept | Referansenavn i Noark 4 | Historisk kontroll-ID |
+| --- | --- | --- |
+| Arkiv | `ARKIV` | `N4.01.01` |
+| Arkivdel | `ARKIVDEL` | `N4.02.01` |
+| Sak | `NOARKSAK` | `N4.03.01a` (tidligere `N4.03.01`) |
+| Journalpost | `JOURNPST` / `JOURNPOST` | `N4.04.01` |
+| Avsender/mottaker | `AVSMOT` | `N4.05.01` |
+| Dokumenttilknytning | `DOKLINK` | `N4.06.01` |
+| Dokumentbeskrivelse | `DOKBESK` / `DOKBESKRIV` | `N4.06.11` |
+| Dokumentrepresentasjon | `DOKVERS` / `DOKVERSJON` | `N4.06.21` |
+| Merknad | `MERKNAD` | `N4.07.01` |
+
+Kildene har ulike roller: offentlige Noark 4 DTD-er og historiske standardkrav beskriver navn/krav; arbeidsreferanser og eldre SQL-kontrollkataloger kan støtte manuell vurdering; **bare det konkrete uttrekkets `metadata.xml`** viser hvilke tabeller, nøkler og datatyper som faktisk er deklarert der. Ingen private SQL-kataloger eller leverandørmappinger er inkludert i kodepakken.
+
+I dokumentkjeden må disse observerte målene holdes adskilt:
+
+| Mål | Betydning |
+| --- | --- |
+| `document_link.count` | Antall koblingsrader mellom journalposter og dokumentbeskrivelser. |
+| `document_description.count` | Antall dokumentbeskrivelser. |
+| `document_representation.count` | Antall representasjoner (versjon × variant), ikke nødvendigvis unike dokumenter. |
+| `document_version.count` | Unike dokument-/versjonskombinasjoner, **bare** når eksplisitt DISTINCT-kartlegging er godkjent. |
+
+Spesielle faglige metrikker produseres bare når en valgt, godkjent adapter oppgir `standard_id: "noark4"`. `semantic_results` kan da inneholde `concept_id`, `metric_id`, `scope`, `method`, `value`, `state`, `source_table`, modell-/adapterhash og historisk SQL-ID. `not_measured` representeres med `value: null`, ikke tallet null. SQL-ID betyr referanse, **ikke** at historisk SQL er kjørt. Resultatet er et foreløpig faglig analysegrunnlag, ikke en komplett Noark 4.1-validering eller endelig DWM-importkontrakt.
+
+En separat, historisk kommandolinjemodul kan fremdeles lage **private, ubekreftede** forslag fra en eksisterende QA-JSON uten ny radskanning:
+
+```bat
+py -3 -m siard_workflow.core.content_qa.ephorte_noark4 ^
+  --qa-json "D:\rapporter\eksempel_innholdskontroll.json" ^
+  --output-dir "D:\systeminformasjon\adapters\ephorte\noark4" ^
+  --adapter-id ephorte_noark4_forslag_01
+```
+
+Dette er **ikke** et valg i den generiske GUI-dialogen. Forslagene er `proposed`, overskriver ikke eksisterende adaptere og gir ingen faglig verifikasjon. Historiske Noark 4-metrikker produseres når en eksplisitt adapter har `standard_id: "noark4"`; observerte tall forutsetter at nødvendige bindinger faktisk er godkjent og radkontrollert. Uten grunnlag skal `value` være `null` og `state` `not_measured`. Relasjonsforslag krever eksplisitte FK-er mot riktig foreldrenøkkel; tvetydige FK-er kan ikke automatisk velges. `required: true` må avgjøres faglig.
+
+Ingen komplett Noark 4.1-kravmatrise, SQL-motor, kontroll mot produksjonssystem eller endelig DWM-evidensimport er etablert. Resultatet er pilot-/referansegrunnlag og krever fortsatt vurdering mot systemversjon og arkivskapers dokumentasjon.
+
+## Rapportering og status
+
+Ulike rapportnivåer skal ikke blandes:
+
+- **Teknisk kjøringsstatus** viser om selve QA-operasjonen fullførte. Operasjonsresultatet bruker `qa_execution_status`; JSON-rapporten bruker `execution_status`, eksempelvis `KONTROLL_FULLFORT`.
+- **Faglig QA-status** viser kvaliteten og dekningsgraden til kontrollene. JSON-resultatets `status` og operasjonsresultatets `qa_status` skal fortsatt kunne vise `DELVIS_KONTROLLERT` selv etter vellykket teknisk kjøring.
+- **Kjørerapport (PDF)** kan ha en annen historisk statusmodell for arbeidsflyten. «GODKJENT» i denne rapporten betyr ikke nødvendigvis arkivfaglig godkjenning.
+
+| QA-status | Betydning |
+| --- | --- |
+| `GODKJENT` | Alle relevante, konfigurerte kontroller er faktisk gjennomført uten avvik. |
+| `DELVIS_KONTROLLERT` | Faglige bindinger, relasjoner eller radskanning mangler, selv om teknisk kontroll er fullført. |
+| `AVVIK` | Gjennomført kontroll fant faktisk brudd på datakvalitets-/integritetskrav. |
+| `IKKE_KONTROLLERT` | En konkret informasjonsbærer eller kontroll mangler tilstrekkelig grunnlag. |
+
+Katalogmodus (`scan_rows=false`) betyr tabeller **funnet**, men rader **ikke skannet**. Dette er ikke en mislykket radskanning. `DELVIS_KONTROLLERT` skal tydelig merkes **IKKE FAGLIG GODKJENT**, men kan gi teknisk fullført operasjonssteg. Faktiske avvik eller tekniske feil skal ikke maskeres av en grønn kjøringsstatus.
+
+QA leverer **PDF og JSON**, samt CSV for tabeller (`_tabeller.csv`), informasjonsbærere (`_informasjonsbaerere.csv`) og funn/avvik (`_avvik.csv`). Kartlegging gir også `_kartleggingsforslag.json`, `_kartleggingsforslag.csv`, `_fremmednokler.csv` og `_relasjonsforslag.csv`. Når en adapter er valgt, kommer `_adapter_bindinger.csv` og `_adapter_relasjoner.csv`. Tilgjengelige standardmetrikker kan gi `_faglige_metrikker.csv`. Alle filene får prefiks med SIARD-navn og kjøretidsstempel, og en kollisjon overskriver ikke tidligere rapporter.
+
+Tabellenes faktiske schema-/tabellnavn og rapportenes referanser er teknisk evidens; private adapterfiler, rå nøkkelverdier og personidentifikatorer skal ikke pakkes inn i rapporten. JSON-resultatet inneholder modell-/adapter-ID og SHA-256, antall `approved`/`proposed`-bindinger og relevante kontrollstatusfelt, men ikke innholdet i den private adapterfilen.
+
+Rapporten skal vise profil-ID, SHA-256 for modell/adapter der tilgjengelig, valgt kildetype, relevante kontrollvalg, antall og status. Fremdriften må ikke fremstille uverifiserte forslag som utførte kontrollresultater.
+
+## Prosjektfiler, fullføringsstatus og ny kjøring
+
+En fullført operasjon lagrer et øyeblikksbilde av innstillingene som faktisk ble kjørt (`completed_params`). Endrede innstillinger gjør at tidligere resultat ikke skal gjenbrukes som om de fortsatt gjaldt. Ferdigmarkeringen fjernes når parametre endres i den ordinære dialogen. Eldre `.siardwf`-prosjekter skal fortsatt kunne leses.
+
+**Lagre prosjekt med nytt filnavn** skal gi en ny, frisk prosjektstatus med samme arbeidsflyt og innstillinger, uten å endre den gamle prosjektfilen eller slette eksisterende rapporter. Ved ny kjøring kan arbeidsflyten nullstilles eksplisitt med sirkelpilen ved «Kjør workflow». En eksisterende fullført operasjon skal ikke automatisk hoppes over når relevante parametre er endret.
+
+Utdata for rapporter/logg/prosjekt følger appens etablerte plassering. Ingen dokumentasjonsopprydding skal endre disse stiene eller føre til ny vedvarende analysedatabase, BaseX-integrasjon eller ekstra automatisk radskanning.
 
 ## Bruk i GUI
 
-Under **Innhold** velges **Innholdskontroll (QA - informasjonsbærere)**:
+1. Velg en SIARD-fil og legg til **Innhold → Innholdskontroll** som vanlig arbeidsflytoperasjon.
+2. Velg **Kilde for innholdskontroll**: automatisk, utpakket mappe eller SIARD-fil.
+3. Velg **Fagmodell** (standard: `saksarkiv`). Bruk eventuelt **Ressursmapper…** for å velge Decom-, KDRS- og systemadapterkataloger. Velg deretter en ekstern, gjennomgått **Systemadapter (JSON)** dersom faglige bindinger skal aktiveres.
+4. Velg om alle tabellrader skal skannes og om deklarerte primærnøkler skal kontrolleres. For rask kartlegging kan radskanning skrus av.
+5. Kjør operasjonen. Se separat på teknisk fullføring, faglig status, kartleggingsforslag og rapporter.
+6. Godkjenn fysisk mapping **utenfor** programmet før ny faktisk fagkontroll. Vurder avvik og resultater opp mot systemdokumentasjon og kildemateriale.
 
-- **Kilde for innholdskontroll:** `Automatisk`, `Utpakket SIARD` eller `SIARD-fil`.
-- **Utpakket SIARD-mappe:** Tom betyr at arbeidsflytens mappe brukes, dersom den finnes.
-- **QA-mal (JSON)**: Tom filsti bruker ePhorte-kartleggingsmalen. For en virkelig fagkontroll velger du din kartlagte profil.
-- **Tell og kontroller alle tabellrader**: `Ja` (standard) strømmer alle tabeller. `Nei` gir katalog og `DELVIS_KONTROLLERT`.
-- **Kontroller primærnøkler fra SIARD-metadata**: `Ja` (standard) kontrollerer eksisterende PK-definisjoner med en midlertidig diskindeks. Deaktivering gir `DELVIS_KONTROLLERT` for tabeller der PK-kontroll da utelates.
+En generisk dialog skal ikke vise leverandørspesifikke ePhorte-valg. Ressurs- og adapterstier er lokale valg, aldri universelle standardstier.
 
-**Anbefalt arbeidsflyt:** Velg plassering etter hva du vil kontrollere:
-**før sammenpakking** for den utpakkede arbeidskopien, eller **etter sammenpakking**
-for den ferdigpakkede SIARD-filen. Se kildevalgene i a3-seksjonen over.
-Kjørerapport og eventuelle Depotrapporter kan legges etter QA-steget.
+## CLI (utvalgte eksempler)
 
-**Merk:** Et prosjekt med alle stegene markert fullført vil hoppe over kjøringen. Bruk et nytt prosjekt eller nullstill kontrollsteget når du skal analysere uttrekket på nytt.
-
-## CLI
-
-Fra repositoryroten:
+Kjør fra repositoryroten. Kildevalg og parametre styres av den installerte programversjonen; kontrollér `--help` ved avvik.
 
 ```bat
-python -X utf8 -m siard_workflow.core.content_qa "D:\SIARD\ephorte.siard" --out "D:\SIARD\kontroll"
-python -X utf8 -m siard_workflow.core.content_qa "D:\SIARD\ephorte.siard" --profile "D:\malsett\ephorte_qa.json" --out "D:\SIARD\kontroll"
-python -X utf8 -m siard_workflow.core.content_qa "D:\SIARD\ephorte.siard" --metadata-only
+python -X utf8 -m siard_workflow.core.content_qa "D:\SIARD\eksempel.siard" --out "D:\SIARD\kontroll"
+python -X utf8 -m siard_workflow.core.content_qa "D:\SIARD\eksempel.siard" --metadata-only
+python -X utf8 -m siard_workflow.core.content_qa --list-domains
+python -X utf8 -m siard_workflow.core.content_qa "D:\SIARD\eksempel.siard" --domain saksarkiv --metadata-only
+python -X utf8 -m siard_workflow.core.content_qa "D:\SIARD\eksempel.siard" --domain saksarkiv --adapter "D:\fagressurser\adapters\mapping.json"
 ```
 
-CLI-returkoder: `0=GODKJENT`, `1=program-/filfeil`, `2=DELVIS_KONTROLLERT`, `3=AVVIK`.
+CLI støtter `--domain`, `--adapter`, `--resources-root`, `--metadata-only`, `--skip-metadata-pk` og `--list-domains`, men ikke et generisk `--profile`-valg. For CLI-bruk med relativ adaptersti må `--resources-root` peke til ekstern systemadaptermappe. Dokumenterte returkoder er `0` godkjent, `1` program-/filfeil, `2` delvis kontrollert og `3` avvik.
 
-## Test
+## Test og regresjon
 
-Kjør `test-innholdskontroll.bat` fra repositoryroten. BAT-filen kontrollerer at nødvendige repo-filer finnes, kontrollerer registrering i GUI og profillagring, kjører enhetstester og validerer Python-syntaks.
+Kjør `test-innholdskontroll.bat` fra repositoryroten. Den skal kontrollere registrering av QA-operasjonen, relevante avhengigheter, enhetstester for innholdskontroll og Python-syntaks. Ved GUI-endringer testes dessuten praktisk via `start.bat` på Windows. Rapporter og adaptertolkning bør verifiseres mot syntetiske data før de brukes på reelle SIARD-er.
 
-## Prinsipper for sikkerhet, skalerbarhet og sporbarhet
+Viktige regresjonsområder:
 
-- **Skrivebeskyttet:** Ingen endring av den opprinnelige SIARD-filen eller utpakkede data.
-- **Store datamengder:** XML-tabeller leses fortløpende, uten å laste alle rader i minnet. Nøkler og relasjoner sjekkes i en midlertidig SQLite-indeks som slettes ved fullføring/feil.
-- **Ingen identifiserende verdier i rapportene:** Nøkkelverdier blir nøklede (HMAC) fingeravtrykk med tilfeldig nøkkel for hver kjøring; originalverdier og nøkler blir ikke skrevet til QA-rapport eller CSV. Statusfordelinger med svært mange distinkte verdier skjules.
-- **Krav til faktisk kontroll:** Verifikasjon som ikke er utført rapporteres eksplisitt som `IKKE_KONTROLLERT`, ikke som `OK`.
-- **Sammenlignbare kjøringer:** Tidsstemplede rapporter inneholder profil-ID og kontrollsum for QA-malen. Forventningstall kan registreres i profilen dersom de er dokumentert fra produksjon eller Noark-uttrekk.
-- **Kontrollavgrensning:** Nøkkelverdier sammenlignes på den lagrede tekstrepresentasjonen. Full SQL-semantikk for kolonnens tegnsett/kollasjon og alle datatyper er ikke validert i a1. Dette er ikke en erstatning for SIARD/DBPTK-validitetstest.
-- **Streng profilvalidering:** Ukjente eller feilstavede regel-felter avvises, fremfor å bli ignorert og dermed gi en tilsynelatende fullført kontroll.
+- Skillet mellom teknisk fullføring og faglig vurdering.
+- At tom streng, utelatt celle og `xsi:nil` ikke blandes.
+- At `NULL`/duplikat i nøkkel ikke maskeres; statusfordeling og DISTINCT måles korrekt.
+- At bare eksplisitt godkjente adapterbindinger brukes; foreslåtte bindinger er inaktive.
+- At generiske fagbegreper **ikke** får leverandørspesifikke tabell-/feltnavn som aliaser (`inntutg`, `trans`), og at den sosiale domenemodellen har kategori `6-18`.
+- At kildedata ikke endres, og at ingen person-/nøkkelverdier lekker til logg/CSV/PDF.
+- At nye prosjektfiler, endrede parametre og gjenkjøring ikke feilaktig gjenbruker ferdigstatus.
+- At de tre uavhengige ressursmappene bevarer tidligere Decom-innstilling og aldri importerer eller godkjenner adaptere automatisk.
+- At valgte adaptere gjennomgås mot metadata uten at forslag blir aktivert.
 
-## Ikke levert per a2 (videre sprint)
+## Begrensninger og videre arbeid
 
-- Ferdig ePhorte-tabell-/feltkartlegging for en bestemt produksjons-SIARD.
-- Direkte import av Decom- eller KDRS Søk & Vis-maler; formatene må først undersøkes på eksempler.
-- Parsing og sammenligning mot et eksternt Noark 5-uttrekk (DWM/Documaster).
-- Automatisk tolkning av alle statuskoder og formelle Noark-krav.
-- Automatisk kontroll av dataverdier for alle deklarerte fremmednokler (a2 leser kun metadata for disse).
-- Dokumentvisning og selve innholdsvurderingen av vedlegg og journalposter.
+Det er ikke dokumentert at alle fagsystemer, Noark-versjoner, datafelter, statuser, kodeverk eller referanser er fullstendig kartlagt. Decom-/KDRS-maler er foreløpig referanser, ikke generell automatisk import. Ekte SIARD-eksport kan avvike fra produksjonsdatabasen. Bruk faglige kontrollkilder og eksplisitt mapping før konklusjoner trekkes.
 
-**Neste naturlige steg:** Kjør a2 i katalogmodus på ett reelt ePhorte-SIARD. Se gjennom kartleggingsforslagene og bekreft de faktiske koblingene for saker og journalposter. Deretter kan vi utvikle presise fagkontroller og sammenligning med Noark 5-uttrekket.
-
-## A5 – ePhorte/Noark 4 (pilot)
-
-Se [INNHOLDSKONTROLL-A5-EPHORTE-NOARK4.md](INNHOLDSKONTROLL-A5-EPHORTE-NOARK4.md) for
-generisk arkivstruktur, opprettelse av **private og ubekreftede**
-ePhorte-adapterforslag, kontroll av deklarerte relasjoner og separat
-telling av dokumentrepresentasjoner og unike dokumentversjoner.
+En framtidig DWM-integrasjon må importere QA-resultat som **ekstern evidens** uten å overskrive egne autoritative målinger. Fysisk systemmapping, formelle Noark-krav og kontroll av dokument-/LOB-tilgjengelighet krever separate, dokumenterte utviklingssteg.

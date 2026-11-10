@@ -1,18 +1,15 @@
-# Generiske fag- og modulmodeller (a4, arbeidsutkast)
+# Generiske fag- og modulmodeller
 
-Denne katalogen inneholder **ingen kundedata, ePhorte- eller Familia-mapping**.
-Den er skrivebeskyttet og brukes av innholdskontroll for aa bygge en
-konseptuell QA-profil. Selve SIARD-databasen analyseres foerst med manuelt
-verifisert ekstern adapter.
+Dette modellbiblioteket er en **versjonert, skrivebeskyttet samling av konseptuelle fagmodeller** for SIARD innholdskontroll. Det inneholder ingen kundedata, leverandørspesifikke tabell-/kolonnemappinger eller private Decom-/KDRS-maler. Fagmodellene er arbeidsutkast, ikke normative kravlister eller beskrivelser av fysiske databaser.
 
-- `index.json`: eneste inngang for registrerte moduler, domener og taksonomi.
-- `common/*.json`: gjenbrukbare faglige moduler og informasjonsbaerere.
-- `domains/*.json`: sammensetning av moduler for et fagomraade.
-- `taxonomies/kommunale_systemkategorier.json`: 9 ASTA/KAISA-hovedkategorier
-  og 20 kommunale kategorier fra `0000-kommune-elarkiv.xlsx` (2020).
+- `index.json`: eksplisitt indeks over moduler, domener og taksonomi.
+- `common/*.json`: 12 generiske moduler, inkludert `social_register` for sosialfaglige begreper.
+- `domains/*.json`: syv domenemodeller: saksarkiv, barnevern, skole, PPT, helsetjeneste, pleie/omsorg og sosialtjeneste.
+- `taxonomies/kommunale_systemkategorier.json`: ni ASTA/KAISA-hovedkategorier og 20 kommunale kategorier (historisk klassifikasjonsgrunnlag fra 2020).
+- `standards/noark4_saksarkiv_reference.json`: offentlig Noark 4-navnereferanse; ingen automatisk eller verifisert ePhorte-mapping.
 
-Alle domener har `status=draft` og er IKKE godkjente, fullstendige
-fagspesifikasjoner. Kategori er ikke det samme som systemprodukt,
-uttaksformat eller lov-/standardversjon.
+En kategori er ikke det samme som et systemprodukt, en godkjent fagmodell eller en bestemt standardversjon. For faktisk faglig kontroll kreves en separat, eksplisitt valgt og gjennomgått JSON-systemadapter **utenfor repositoryet**. Bindinger med `review_status: proposed` aktiveres aldri automatisk. Metadata-treff mot en adapter gir heller ikke faglig godkjenning.
 
-Mer dokumentasjon: `docs/INNHOLDSKONTROLL-A4-MODELLER-OG-ADAPTERE.md`.
+Tre uavhengige lokale ressursmapper kan velges for Decom/SIARDMapper, KDRS Søk & Vis og systemadaptere. De legges ikke under `siard_workflow/models/` og importeres ikke automatisk.
+
+Full beskrivelse av modellene, adapterkontrakten, ressursmapper, kontrollstatuser og rapporter: [`docs/INNHOLDSKONTROLL.md`](../../docs/INNHOLDSKONTROLL.md).
